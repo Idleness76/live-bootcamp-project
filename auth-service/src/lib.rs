@@ -1,6 +1,8 @@
-use axum::{http::StatusCode, response::IntoResponse, routing::post, serve::Serve, Router};
+use axum::{routing::post, serve::Serve, Router};
 use std::error::Error;
 use tower_http::services::ServeDir;
+
+pub mod routes;
 
 /// Application struct that encapsulates the HTTP server and its configuration.
 /// This provides a clean separation between server construction and execution.
@@ -25,11 +27,11 @@ impl Application {
         let router = Router::new()
             .nest_service("/", ServeDir::new("assets"))
             // Register all authentication API endpoints with their handler functions
-            .route("/signup", post(signup))
-            .route("/login", post(login))
-            .route("/verify-2fa", post(verify_2fa))
-            .route("/logout", post(logout))
-            .route("/verify-token", post(verify_token));
+            .route("/signup", post(routes::signup))
+            .route("/login", post(routes::login))
+            .route("/verify-2fa", post(routes::verify_2fa))
+            .route("/logout", post(routes::logout))
+            .route("/verify-token", post(routes::verify_token));
 
         // Bind to the specified address and get the actual bound address
         let listener = tokio::net::TcpListener::bind(address).await?;
@@ -53,38 +55,4 @@ impl Application {
         // Start the server and await its completion
         self.server.await
     }
-}
-
-// =============================================================================
-// HTTP Route Handlers
-// =============================================================================
-
-/// Handles user registration requests
-/// Currently returns 200 OK as a placeholder implementation
-async fn signup() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-/// Handles user login requests
-/// Currently returns 200 OK as a placeholder implementation
-async fn login() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-/// Handles two-factor authentication verification
-/// Currently returns 200 OK as a placeholder implementation
-async fn verify_2fa() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-/// Handles user logout requests
-/// Currently returns 200 OK as a placeholder implementation
-async fn logout() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-/// Handles token validation requests
-/// Currently returns 200 OK as a placeholder implementation
-async fn verify_token() -> impl IntoResponse {
-    StatusCode::OK.into_response()
 }
