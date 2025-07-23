@@ -1,4 +1,5 @@
 use auth_service::Application;
+use uuid::Uuid;
 
 /// Test application wrapper that provides HTTP client functionality for integration tests.
 /// This struct encapsulates a running server instance and an HTTP client for making requests.
@@ -50,16 +51,14 @@ impl TestApp {
             .expect("Failed to execute request.")
     }
 
-    /// Makes a POST request to the signup endpoint with username and password
-    pub async fn post_signup(&self, username: &str, password: &str) -> reqwest::Response {
+    /// Makes a POST request to the signup endpoint with properly formatted JSON body
+    pub async fn post_signup<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
         self.http_client
             .post(&format!("{}/signup", &self.address))
-            .header("Content-Type", "application/json")
-            // Format JSON body with user credentials
-            .body(format!(
-                r#"{{"username":"{}","password":"{}"}}"#,
-                username, password
-            ))
+            .json(body)
             .send()
             .await
             .expect("Failed to execute request.")
@@ -112,4 +111,8 @@ impl TestApp {
             .await
             .expect("Failed to execute request.")
     }
+}
+
+pub fn get_random_email() -> String {
+    format!("{}@example.com", Uuid::new_v4())
 }
