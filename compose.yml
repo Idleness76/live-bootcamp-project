@@ -1,23 +1,29 @@
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app-service
+      - auth-service
+
   app-service:
     build:
-      context: . # Build from root directory (workspace root)
+      context: .
       dockerfile: app-service/Dockerfile
     image: idleness76/app-service
     restart: "always"
-    environment: # set up environment variables
-      AUTH_SERVICE_IP: ${AUTH_SERVICE_IP:-localhost} # Use localhost as the default value
-      AUTH_SERVICE_HOST_NAME: auth-service
-    ports:
-      - "8000:8000"
+    environment:
+      - AUTH_SERVICE_HOST_NAME=auth-service
+      - AUTH_SERVICE_IP=auth-service
     depends_on:
       auth-service:
         condition: service_started
   auth-service:
     build:
-      context: . # Build from root directory (workspace root)
+      context: .
       dockerfile: auth-service/Dockerfile
     image: idleness76/auth-service
     restart: "always"
-    ports:
-      - "3000:3000"

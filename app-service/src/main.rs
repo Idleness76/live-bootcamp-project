@@ -32,12 +32,9 @@ struct IndexTemplate {
 }
 
 async fn root() -> impl IntoResponse {
-    let mut address = env::var("AUTH_SERVICE_IP").unwrap_or("localhost".to_owned());
-    if address.is_empty() {
-        address = "localhost".to_owned();
-    }
-    let login_link = format!("http://{}:3000", address);
-    let logout_link = format!("http://{}:3000/logout", address);
+    // Use relative paths when behind reverse proxy
+    let login_link = "/auth".to_string();
+    let logout_link = "/auth/logout".to_string();
 
     let template = IndexTemplate {
         login_link,
@@ -60,7 +57,8 @@ async fn protected(jar: CookieJar) -> impl IntoResponse {
         "token": &jwt_cookie.value(),
     });
 
-    let auth_hostname = env::var("AUTH_SERVICE_HOST_NAME").unwrap_or("0.0.0.0".to_owned());
+    // Use internal service name for container-to-container communication
+    let auth_hostname = env::var("AUTH_SERVICE_HOST_NAME").unwrap_or("auth-service".to_owned());
     let url = format!("http://{}:3000/verify-token", auth_hostname);
 
     let response = match api_client.post(&url).json(&verify_token_body).send().await {

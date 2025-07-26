@@ -32,7 +32,7 @@ docker compose build
 docker compose up
 ```
 
-visit http://localhost:8000 and http://localhost:3000
+visit http://localhost/app and http://localhost/auth
 
 ## Integration tests
 ```bash
