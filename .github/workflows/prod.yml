@@ -82,8 +82,10 @@ jobs:
 
     - name: Copy files to droplet
       run: |
+        sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' ssh -o StrictHostKeyChecking=no root@${{ vars.DROPLET_IP }} "rm -rf ~/nginx.conf ~/compose.yml"
         sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' scp -o StrictHostKeyChecking=no compose.yml root@${{ vars.DROPLET_IP }}:~
         sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' scp -o StrictHostKeyChecking=no nginx.conf root@${{ vars.DROPLET_IP }}:~
+        sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' ssh -o StrictHostKeyChecking=no root@${{ vars.DROPLET_IP }} "ls -la ~/nginx.conf ~/compose.yml"
 
     - name: Deploy
       uses: appleboy/ssh-action@master
