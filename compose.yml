@@ -1,5 +1,8 @@
 services:
   app-service:
+    build:
+      context: . # Build from root directory (workspace root)
+      dockerfile: app-service/Dockerfile # But use the service's Dockerfile
     image: idleness76/app-service # specify name of image on Docker Hub
     restart: "always" # automatically restart container when server crashes
     environment: # set up environment variables
@@ -11,6 +14,9 @@ services:
       auth-service:
         condition: service_started
   auth-service:
+    build:
+      context: . # Build from root directory (workspace root)
+      dockerfile: auth-service/Dockerfile # But use the service's Dockerfile
     image: idleness76/auth-service
     restart: "always" # automatically restart container when server crashes
     ports:

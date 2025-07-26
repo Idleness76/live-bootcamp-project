@@ -23,5 +23,6 @@ RUN cargo build --release --bin app-service
 FROM debian:buster-slim AS runtime
 WORKDIR /app
 COPY --from=builder /app/target/release/app-service /usr/local/bin
+# Fix the assets path - it should be relative to the workspace root
 COPY --from=builder /app/assets /app/assets
 ENTRYPOINT ["/usr/local/bin/app-service"]
