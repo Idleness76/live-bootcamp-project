@@ -2,22 +2,22 @@ services:
   app-service:
     build:
       context: . # Build from root directory (workspace root)
-      dockerfile: app-service/Dockerfile # But use the service's Dockerfile
-    image: idleness76/app-service # specify name of image on Docker Hub
-    restart: "always" # automatically restart container when server crashes
+      dockerfile: app-service/Dockerfile
+    image: idleness76/app-service
+    restart: "always"
     environment: # set up environment variables
       AUTH_SERVICE_IP: ${AUTH_SERVICE_IP:-localhost} # Use localhost as the default value
       AUTH_SERVICE_HOST_NAME: auth-service
     ports:
-      - "8000:8000" # expose port 8000 so that applications outside the container can connect to it 
-    depends_on: # only run app-service after auth-service has started
+      - "8000:8000"
+    depends_on:
       auth-service:
         condition: service_started
   auth-service:
     build:
       context: . # Build from root directory (workspace root)
-      dockerfile: auth-service/Dockerfile # But use the service's Dockerfile
+      dockerfile: auth-service/Dockerfile
     image: idleness76/auth-service
-    restart: "always" # automatically restart container when server crashes
+    restart: "always"
     ports:
-      - "3000:3000" # expose port 3000 so that applications outside the container can connect to it 
+      - "3000:3000"
