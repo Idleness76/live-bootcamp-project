@@ -82,10 +82,12 @@ jobs:
 
     - name: Copy files to droplet
       run: |
-        sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' ssh -o StrictHostKeyChecking=no root@${{ vars.DROPLET_IP }} "rm -rf ~/nginx.conf ~/compose.yml"
+        sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' ssh -o StrictHostKeyChecking=no root@${{ vars.DROPLET_IP }} "rm -rf ~/nginx.conf ~/compose.yml ~/init-letsencrypt.sh"
         sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' scp -o StrictHostKeyChecking=no compose.yml root@${{ vars.DROPLET_IP }}:~
         sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' scp -o StrictHostKeyChecking=no nginx.conf root@${{ vars.DROPLET_IP }}:~
-        sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' ssh -o StrictHostKeyChecking=no root@${{ vars.DROPLET_IP }} "ls -la ~/nginx.conf ~/compose.yml"
+        sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' scp -o StrictHostKeyChecking=no init-letsencrypt.sh root@${{ vars.DROPLET_IP }}:~
+        sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' ssh -o StrictHostKeyChecking=no root@${{ vars.DROPLET_IP }} "chmod +x ~/init-letsencrypt.sh"
+        sshpass -v -p '${{ secrets.DROPLET_PASSWORD }}' ssh -o StrictHostKeyChecking=no root@${{ vars.DROPLET_IP }} "ls -la ~/nginx.conf ~/compose.yml ~/init-letsencrypt.sh"
 
     - name: Deploy
       uses: appleboy/ssh-action@master
@@ -96,6 +98,7 @@ jobs:
         script: |
           cd ~
           export AUTH_SERVICE_IP=${{ vars.DROPLET_IP }}
+          export LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}
           docker compose down
           docker compose pull
           docker compose up -d
