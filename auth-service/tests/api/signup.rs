@@ -37,5 +37,19 @@ async fn should_return_422_if_malformed_input() {
 
 #[tokio::test]
 async fn should_return_201_if_valid_input() {
-    todo!()
+    let app = TestApp::new().await;
+
+    let new_user = serde_json::json!({
+        "email": get_random_email(),
+        "requires2FA": true,
+        "password": "password123"
+    });
+
+    let response = app.post_signup(&new_user).await;
+    assert_eq!(
+        response.status().as_u16(),
+        201,
+        "Failed for input: {:?}",
+        new_user
+    );
 }
