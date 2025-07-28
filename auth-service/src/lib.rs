@@ -2,6 +2,7 @@ use axum::{routing::post, serve::Serve, Router};
 use std::error::Error;
 use tower_http::services::ServeDir;
 
+pub mod domain;
 pub mod routes;
 
 /// Application struct that encapsulates the HTTP server and its configuration.
