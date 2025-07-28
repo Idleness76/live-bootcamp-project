@@ -4,6 +4,7 @@ use tower_http::services::ServeDir;
 
 pub mod domain;
 pub mod routes;
+pub mod services;
 
 /// Application struct that encapsulates the HTTP server and its configuration.
 /// This provides a clean separation between server construction and execution.
