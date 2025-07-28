@@ -12,6 +12,7 @@ tower-http = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
+async-trait = { workspace = true }
 
 [dev-dependencies]
 reqwest = { workspace = true }

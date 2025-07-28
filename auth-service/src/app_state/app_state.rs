@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::services::HashmapUserStore;
+use crate::domain::UserStore;
 
-// Using a type alias to improve readability!
-pub type UserStoreType = Arc<RwLock<HashmapUserStore>>;
+// Using trait objects with Arc<RwLock<dyn UserStore>>
+pub type UserStoreType = Arc<RwLock<dyn UserStore + Send + Sync>>;
 
 #[derive(Clone)]
 pub struct AppState {

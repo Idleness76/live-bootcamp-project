@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app_state::AppState,
-    domain::{AuthAPIError, User},
-    services::UserStoreError,
+    domain::{AuthAPIError, User, UserStoreError},
 };
 
 pub async fn signup(
@@ -27,7 +26,7 @@ pub async fn signup(
     let mut user_store = state.user_store.write().await;
 
     // Handle add_user result properly instead of using unwrap
-    match user_store.add_user(user) {
+    match user_store.add_user(user).await {
         Ok(()) => {
             let response = Json(SignupResponse {
                 message: "User created successfully!".to_string(),
