@@ -1,5 +1,10 @@
 use app_state::AppState;
-use axum::{routing::post, serve::Serve, Router};
+use axum::{
+    response::Html,
+    routing::{get, post},
+    serve::Serve,
+    Router,
+};
 use std::error::Error;
 use tower_http::services::ServeDir;
 
@@ -29,6 +34,8 @@ impl Application {
     pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
         // Create router with API routes first
         let router = Router::new()
+            // Add root route that serves the index.html
+            .route("/", get(serve_index))
             // Register all authentication API endpoints with their handler functions
             .route("/signup", post(routes::signup))
             .route("/login", post(routes::login))
@@ -61,4 +68,8 @@ impl Application {
         // Start the server and await its completion
         self.server.await
     }
+}
+
+async fn serve_index() -> Html<&'static str> {
+    Html(include_str!("../assets/index.html"))
 }
