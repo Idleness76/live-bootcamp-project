@@ -27,15 +27,16 @@ impl Application {
     /// * `Ok(Application)` - Successfully configured application ready to run
     /// * `Err(Box<dyn Error>)` - Failed to bind to the address or configure the server
     pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
-        // Create router with static file serving from the "assets" directory
+        // Create router with API routes first
         let router = Router::new()
-            .nest_service("/", ServeDir::new("assets"))
             // Register all authentication API endpoints with their handler functions
             .route("/signup", post(routes::signup))
             .route("/login", post(routes::login))
             .route("/verify-2fa", post(routes::verify_2fa))
             .route("/logout", post(routes::logout))
             .route("/verify-token", post(routes::verify_token))
+            // Serve static files from /assets path instead of root
+            .nest_service("/assets", ServeDir::new("assets"))
             .with_state(app_state);
 
         // Bind to the specified address and get the actual bound address
