@@ -21,8 +21,11 @@ impl TestApp {
     /// # Returns
     /// A configured `TestApp` instance ready for testing
     pub async fn new() -> Self {
+        let user_store = todo!();
+        let app_state = todo!();
+
         // Build application on random port for test isolation
-        let app = Application::build("127.0.0.1:0")
+        let app = Application::build(app_state, "127.0.0.1:0")
             .await
             .expect("Failed to build app");
 
