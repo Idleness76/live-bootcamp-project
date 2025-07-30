@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, serde::Deserialize, Clone, PartialEq, Eq, Hash)]
 pub struct Email(String);
 
 impl Email {

@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, serde::Deserialize, Clone, PartialEq)]
 pub struct Password(String);
 
 impl AsRef<str> for Password {
