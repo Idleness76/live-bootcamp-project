@@ -8,7 +8,7 @@ async fn should_return_422_if_malformed_input() {
 
     let test_cases = [
         serde_json::json!({
-            "password": "password123",
+            "password": "Password123!",
             "requires2FA": true
             // Missing email field - this should cause 422
         }),
@@ -19,7 +19,7 @@ async fn should_return_422_if_malformed_input() {
         }),
         serde_json::json!({
             "email": "invalid-email",
-            "password": "password123"
+            "password": "Password123!"
             // Missing requires2FA field - this should cause 422
         }),
     ];
@@ -41,7 +41,7 @@ async fn should_return_400_if_invalid_input() {
     let input = [
         serde_json::json!({
             "email": "not-an-email",  // Invalid email format
-            "password": "password123",
+            "password": "Password123!",
             "requires2FA": true
         }),
         serde_json::json!({
@@ -51,7 +51,7 @@ async fn should_return_400_if_invalid_input() {
         }),
         serde_json::json!({
             "email": "",  // Empty email
-            "password": "password123",
+            "password": "Password123!",
             "requires2FA": true
         }),
         serde_json::json!({
@@ -83,7 +83,7 @@ async fn should_return_409_if_email_already_exists() {
 
     let signup_body = serde_json::json!({
         "email": random_email,
-        "password": "password123",
+        "password": "Password123!",
         "requires2FA": false
     });
 
@@ -112,7 +112,7 @@ async fn should_return_201_if_valid_input() {
     let new_user = serde_json::json!({
         "email": get_random_email(),
         "requires2FA": true,
-        "password": "password123"
+        "password": "Password123!"
     });
 
     let response = app.post_signup(&new_user).await;
