@@ -18,3 +18,5 @@ async-trait = { workspace = true }
 reqwest = { workspace = true }
 fake = { workspace = true }
 rand = { workspace = true }
+quickcheck = { workspace = true }
+quickcheck_macros = { workspace = true }
