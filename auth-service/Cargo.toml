@@ -16,3 +16,5 @@ async-trait = { workspace = true }
 
 [dev-dependencies]
 reqwest = { workspace = true }
+fake = { workspace = true }
+rand = { workspace = true }

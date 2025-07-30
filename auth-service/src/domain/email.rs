@@ -165,4 +165,69 @@ mod tests {
         let email = Email::parse("test@example.com").unwrap();
         assert_eq!(email.as_ref(), "test@example.com");
     }
+
+    #[cfg(test)]
+    mod property_tests {
+        use super::*;
+        use fake::faker::internet::en::SafeEmail;
+        use fake::Fake;
+
+        #[test]
+        fn test_generated_safe_emails_are_valid() {
+            // Test with 100 generated safe emails
+            for _ in 0..100 {
+                let email: String = SafeEmail().fake();
+                assert!(
+                    Email::parse(&email).is_ok(),
+                    "Generated safe email should be valid: {}",
+                    email
+                );
+            }
+        }
+
+        #[test]
+        fn test_malformed_emails_are_rejected() {
+            // Generate emails with known invalid patterns
+            let invalid_patterns = vec![
+                "no-at-symbol",
+                "@missing-user.com",
+                "missing-domain@",
+                "double@@at.com",
+                "user@.starts-with-dot.com",
+                "user@ends-with-dot.com.",
+                "user@consecutive..dots.com",
+            ];
+
+            for pattern in invalid_patterns {
+                assert!(
+                    Email::parse(pattern).is_err(),
+                    "Should reject invalid pattern: {}",
+                    pattern
+                );
+            }
+        }
+
+        #[test]
+        fn test_random_strings_mostly_invalid() {
+            use fake::faker::lorem::en::Word;
+
+            let mut valid_count = 0;
+            let total_tests = 1000;
+
+            for _ in 0..total_tests {
+                let random_string: String = Word().fake();
+                if Email::parse(&random_string).is_ok() {
+                    valid_count += 1;
+                }
+            }
+
+            // Most random words shouldn't be valid emails
+            assert!(
+                valid_count < total_tests / 10,
+                "Too many random strings were valid emails: {}/{}",
+                valid_count,
+                total_tests
+            );
+        }
+    }
 }
