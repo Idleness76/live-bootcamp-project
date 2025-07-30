@@ -45,9 +45,10 @@ impl Email {
 
         Ok(Email(email.to_string()))
     }
+}
 
-    // Getter method to access the email string
-    pub fn as_str(&self) -> &str {
+impl AsRef<str> for Email {
+    fn as_ref(&self) -> &str {
         &self.0
     }
 }
@@ -162,6 +163,6 @@ mod tests {
     #[test]
     fn test_email_access() {
         let email = Email::parse("test@example.com").unwrap();
-        assert_eq!(email.as_str(), "test@example.com");
+        assert_eq!(email.as_ref(), "test@example.com");
     }
 }
