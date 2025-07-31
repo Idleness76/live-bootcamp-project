@@ -34,8 +34,7 @@ impl UserStore for HashmapUserStore {
         email: &Email,
         password: &Password,
     ) -> Result<(), UserStoreError> {
-        let user = self.get_user(email).await?;
-        if &user.password == password {
+        if &self.get_user(email).await?.password == password {
             Ok(())
         } else {
             Err(UserStoreError::InvalidCredentials)

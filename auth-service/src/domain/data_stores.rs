@@ -1,5 +1,4 @@
 use super::User;
-
 use crate::domain::{Email, Password};
 
 #[async_trait::async_trait]
