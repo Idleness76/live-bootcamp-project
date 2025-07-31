@@ -19,18 +19,20 @@ pub async fn signup(
 
     let user = User::new(email, password, request.requires_2fa);
 
-    let mut user_store = state.user_store.write().await;
+    {
+        let mut user_store = state.user_store.write().await;
 
-    // Handle add_user result properly instead of using unwrap
-    match user_store.add_user(user).await {
-        Ok(()) => {
-            let response = Json(SignupResponse {
-                message: "User created successfully!".to_string(),
-            });
-            Ok((StatusCode::CREATED, response))
+        // Handle add_user result properly instead of using unwrap
+        match user_store.add_user(user).await {
+            Ok(()) => {
+                let response = Json(SignupResponse {
+                    message: "User created successfully!".to_string(),
+                });
+                Ok((StatusCode::CREATED, response))
+            }
+            Err(UserStoreError::UserAlreadyExists) => Err(AuthAPIError::UserAlreadyExists),
+            Err(_) => Err(AuthAPIError::UnexpectedError),
         }
-        Err(UserStoreError::UserAlreadyExists) => Err(AuthAPIError::UserAlreadyExists),
-        Err(_) => Err(AuthAPIError::UnexpectedError),
     }
 }
 
