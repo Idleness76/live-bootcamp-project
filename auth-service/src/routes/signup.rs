@@ -19,20 +19,22 @@ pub async fn signup(
 
     let user = User::new(email, password, request.requires_2fa);
 
-    {
+    // Acquire lock, perform operation, and immediately release
+    let result = {
         let mut user_store = state.user_store.write().await;
+        user_store.add_user(user).await
+    };
 
-        // Handle add_user result properly instead of using unwrap
-        match user_store.add_user(user).await {
-            Ok(()) => {
-                let response = Json(SignupResponse {
-                    message: "User created successfully!".to_string(),
-                });
-                Ok((StatusCode::CREATED, response))
-            }
-            Err(UserStoreError::UserAlreadyExists) => Err(AuthAPIError::UserAlreadyExists),
-            Err(_) => Err(AuthAPIError::UnexpectedError),
+    // Handle the result after lock is released
+    match result {
+        Ok(()) => {
+            let response = Json(SignupResponse {
+                message: "User created successfully!".to_string(),
+            });
+            Ok((StatusCode::CREATED, response))
         }
+        Err(UserStoreError::UserAlreadyExists) => Err(AuthAPIError::UserAlreadyExists),
+        Err(_) => Err(AuthAPIError::UnexpectedError),
     }
 }
 
