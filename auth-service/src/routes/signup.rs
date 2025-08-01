@@ -19,14 +19,8 @@ pub async fn signup(
 
     let user = User::new(email, password, request.requires_2fa);
 
-    // Acquire lock, perform operation, and immediately release
-    let result = {
-        let mut user_store = state.user_store.write().await;
-        user_store.add_user(user).await
-    };
-
-    // Handle the result after lock is released
-    match result {
+    // Chain the calls - lock is automatically released after add_user completes
+    match state.user_store.write().await.add_user(user).await {
         Ok(()) => {
             let response = Json(SignupResponse {
                 message: "User created successfully!".to_string(),
