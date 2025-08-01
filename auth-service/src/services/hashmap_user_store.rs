@@ -29,10 +29,10 @@ impl UserStore for HashmapUserStore {
         email: &Email,
         password: &Password,
     ) -> Result<(), UserStoreError> {
-        if &self.get_user(email).await?.password == password {
-            Ok(())
-        } else {
-            Err(UserStoreError::InvalidCredentials)
+        match self.users.get(email) {
+            Some(user) if &user.password == password => Ok(()),
+            Some(_) => Err(UserStoreError::InvalidCredentials),
+            None => Err(UserStoreError::UserNotFound),
         }
     }
 }
