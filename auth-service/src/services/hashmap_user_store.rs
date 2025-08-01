@@ -2,10 +2,6 @@ use std::collections::HashMap;
 
 use crate::domain::{Email, Password, User, UserStore, UserStoreError};
 
-/// A simple in-memory user store implementation using HashMap.
-///
-/// This store maps user email addresses to User objects and provides
-/// basic CRUD operations for user management.
 #[derive(Default)]
 pub struct HashmapUserStore {
     users: HashMap<Email, User>,
@@ -17,8 +13,7 @@ impl UserStore for HashmapUserStore {
         if self.users.contains_key(&user.email) {
             return Err(UserStoreError::UserAlreadyExists);
         }
-        let email = user.email.clone();
-        self.users.insert(email, user);
+        self.users.insert(user.email.clone(), user);
         Ok(())
     }
 
@@ -49,8 +44,8 @@ mod tests {
     #[tokio::test]
     async fn test_add_user() {
         let mut user_store = HashmapUserStore::default();
-        let email = Email::parse("test@example.com").unwrap();
-        let password = Password::parse("Password123!").unwrap();
+        let email = Email::parse("test@example.com".to_string()).unwrap();
+        let password = Password::parse("Password123!".to_string()).unwrap();
         let user = User::new(email, password, true);
         assert!(user_store.add_user(user).await.is_ok());
     }
@@ -58,8 +53,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_user() -> Result<(), UserStoreError> {
         let mut user_store = HashmapUserStore::default();
-        let email = Email::parse("test@example.com").unwrap();
-        let password = Password::parse("Password123!").unwrap();
+        let email = Email::parse("test@example.com".to_string()).unwrap();
+        let password = Password::parse("Password123!".to_string()).unwrap();
         let user = User::new(email.clone(), password, true);
         user_store.add_user(user).await?;
         let retrieved_user = user_store.get_user(&email).await?;
@@ -71,16 +66,14 @@ mod tests {
     #[tokio::test]
     async fn test_validate_user() -> Result<(), UserStoreError> {
         let mut user_store = HashmapUserStore::default();
-        let email = Email::parse("test@example.com").unwrap();
-        let password = Password::parse("Password123!").unwrap();
+        let email = Email::parse("test@example.com".to_string()).unwrap();
+        let password = Password::parse("Password123!".to_string()).unwrap();
         let user = User::new(email.clone(), password.clone(), true);
         user_store.add_user(user).await?;
 
-        // Test valid credentials
         assert!(user_store.validate_user(&email, &password).await.is_ok());
 
-        // Test invalid password
-        let wrong_password = Password::parse("WrongPassword123!").unwrap();
+        let wrong_password = Password::parse("WrongPassword123!".to_string()).unwrap();
         assert!(user_store
             .validate_user(&email, &wrong_password)
             .await
@@ -92,8 +85,8 @@ mod tests {
     #[tokio::test]
     async fn test_add_duplicate_user() {
         let mut user_store = HashmapUserStore::default();
-        let email = Email::parse("test@example.com").unwrap();
-        let password = Password::parse("Password123!").unwrap();
+        let email = Email::parse("test@example.com".to_string()).unwrap();
+        let password = Password::parse("Password123!".to_string()).unwrap();
         let user1 = User::new(email.clone(), password.clone(), true);
         let user2 = User::new(email, password, false);
 
@@ -107,7 +100,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_nonexistent_user() {
         let user_store = HashmapUserStore::default();
-        let email = Email::parse("nonexistent@example.com").unwrap();
+        let email = Email::parse("nonexistent@example.com".to_string()).unwrap();
         assert_eq!(
             user_store.get_user(&email).await.unwrap_err(),
             UserStoreError::UserNotFound

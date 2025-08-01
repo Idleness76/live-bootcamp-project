@@ -8,35 +8,32 @@ impl AsRef<str> for Password {
 }
 
 impl Password {
-    pub fn parse(password: &str) -> Result<Self, String> {
-        if password.is_empty() {
+    pub fn parse(s: String) -> Result<Password, String> {
+        if s.is_empty() {
             return Err("Password cannot be empty".to_string());
         }
 
-        if password.len() < 8 {
+        if s.len() < 8 {
             return Err("Password must be at least 8 characters long".to_string());
         }
 
-        if !password.chars().any(|c| c.is_uppercase()) {
+        if !s.chars().any(|c| c.is_uppercase()) {
             return Err("Password must contain at least one uppercase letter".to_string());
         }
 
-        if !password.chars().any(|c| c.is_lowercase()) {
+        if !s.chars().any(|c| c.is_lowercase()) {
             return Err("Password must contain at least one lowercase letter".to_string());
         }
 
-        if !password.chars().any(|c| c.is_ascii_digit()) {
+        if !s.chars().any(|c| c.is_ascii_digit()) {
             return Err("Password must contain at least one digit".to_string());
         }
 
-        if !password
-            .chars()
-            .any(|c| "!@#$%^&*()_+-=[]{}|;:,.<>?".contains(c))
-        {
+        if !s.chars().any(|c| "!@#$%^&*()_+-=[]{}|;:,.<>?".contains(c)) {
             return Err("Password must contain at least one special character".to_string());
         }
 
-        Ok(Password(password.to_string()))
+        Ok(Password(s.to_string()))
     }
 }
 
@@ -115,15 +112,14 @@ mod tests {
         }
     }
 
-    // Property-based tests (quickcheck) - Primary testing approach
     #[quickcheck]
     fn prop_valid_passwords_always_parse_successfully(valid_pw: ValidPassword) -> bool {
-        Password::parse(&valid_pw.0).is_ok()
+        Password::parse(valid_pw.0).is_ok()
     }
 
     #[quickcheck]
     fn prop_parsed_password_equals_input(valid_pw: ValidPassword) -> bool {
-        match Password::parse(&valid_pw.0) {
+        match Password::parse(valid_pw.0.clone()) {
             Ok(password) => password.as_ref() == valid_pw.0,
             Err(_) => false,
         }
@@ -132,31 +128,29 @@ mod tests {
     #[quickcheck]
     fn prop_short_passwords_always_fail(short_input: String) -> bool {
         if short_input.len() < 8 {
-            Password::parse(&short_input).is_err()
+            Password::parse(short_input).is_err()
         } else {
-            true // Skip if not actually short
+            true
         }
     }
 
-    // Fake data tests - Secondary approach for specific scenarios
     #[test]
     fn test_fake_short_passwords_fail() {
         use fake::faker::internet::en::Password as FakePassword;
 
         for _ in 0..50 {
-            let fake_password: String = FakePassword(1..8).fake(); // Always too short
-            assert!(Password::parse(&fake_password).is_err());
+            let fake_password: String = FakePassword(1..8).fake();
+            assert!(Password::parse(fake_password).is_err());
         }
     }
 
-    // Minimal custom tests - Only for edge cases not covered by property tests
     #[test]
     fn test_empty_password_fails() {
-        assert!(Password::parse("").is_err());
+        assert!(Password::parse(String::new()).is_err());
     }
 
     #[test]
     fn test_known_valid_password() {
-        assert!(Password::parse("Password123!").is_ok());
+        assert!(Password::parse("Password123!".to_string()).is_ok());
     }
 }

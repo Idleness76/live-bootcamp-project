@@ -1,5 +1,4 @@
-use super::User;
-use crate::domain::{Email, Password};
+use crate::domain::{Email, Password, User};
 
 #[async_trait::async_trait]
 pub trait UserStore {
