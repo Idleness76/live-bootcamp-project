@@ -71,15 +71,13 @@ impl TestApp {
     }
 
     /// Makes a POST request to the login endpoint with username and password
-    pub async fn post_login(&self, username: &str, password: &str) -> reqwest::Response {
+    pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
         self.http_client
             .post(&format!("{}/login", &self.address))
-            .header("Content-Type", "application/json")
-            // Format JSON body with login credentials
-            .body(format!(
-                r#"{{"username":"{}","password":"{}"}}"#,
-                username, password
-            ))
+            .json(body)
             .send()
             .await
             .expect("Failed to execute request.")
