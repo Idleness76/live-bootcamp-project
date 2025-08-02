@@ -75,16 +75,19 @@ async fn should_return_401_if_incorrect_credentials() {
     // First create a user
     let signup_body = serde_json::json!({
         "email": "test@example.com",
-        "password": "correct_password"
+        "password": "Password123!"
     });
     app.post_signup(&signup_body).await;
 
     // Try login with wrong password
     let login_body = serde_json::json!({
         "email": "test@example.com",
-        "password": "wrong_password"
+        "password": "!Password123" // Incorrect password
     });
 
     let response = app.post_login(&login_body).await;
-    assert_eq!(response.status().as_u16(), 401);
+    let status = response.status().as_u16();
+    println!("Status: {}", status);
+    println!("Body: {:?}", response.text().await);
+    assert_eq!(status, 401);
 }
