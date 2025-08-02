@@ -23,19 +23,21 @@ pub async fn login(
     let password =
         Password::parse(request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
 
-    let user_store = &state.user_store.read().await;
+    let _user = {
+        let user_store = state.user_store.read().await;
 
-    // Validate user with parsed domain types
-    user_store
-        .validate_user(&email, &password)
-        .await
-        .map_err(|_| AuthAPIError::IncorrectCredentials)?;
+        // Validate user with parsed domain types
+        user_store
+            .validate_user(&email, &password)
+            .await
+            .map_err(|_| AuthAPIError::IncorrectCredentials)?;
 
-    // Get the user
-    let user = user_store
-        .get_user(&email)
-        .await
-        .map_err(|_| AuthAPIError::IncorrectCredentials)?;
+        // Get the user
+        user_store
+            .get_user(&email)
+            .await
+            .map_err(|_| AuthAPIError::IncorrectCredentials)?
+    };
 
     Ok(StatusCode::OK.into_response())
 }
