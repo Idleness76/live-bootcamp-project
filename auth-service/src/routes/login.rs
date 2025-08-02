@@ -1,3 +1,4 @@
+use crate::domain::{AuthAPIError, Email, Password};
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use serde::Deserialize;
 
@@ -8,7 +9,14 @@ pub struct LoginRequest {
 }
 
 /// Handles user login requests
-/// Currently returns 200 OK as a placeholder implementation
-pub async fn login(Json(_request): Json<LoginRequest>) -> impl IntoResponse {
-    StatusCode::OK.into_response()
+pub async fn login(Json(request): Json<LoginRequest>) -> Result<impl IntoResponse, AuthAPIError> {
+    // Parse and validate email using domain type
+    let _email = Email::parse(request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
+
+    // Parse and validate password using domain type
+    let _password =
+        Password::parse(request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
+
+    // TODO: Implement actual authentication logic
+    Ok(StatusCode::OK.into_response())
 }

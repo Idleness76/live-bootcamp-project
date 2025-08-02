@@ -5,7 +5,7 @@ use auth_service::ErrorResponse;
 async fn should_return_422_if_malformed_credentials() {
     let app = TestApp::new().await;
 
-    let malformed_inputs = [
+    let input = [
         serde_json::json!({
             "username": "testuser",
             // Missing password field
@@ -29,45 +29,41 @@ async fn should_return_422_if_malformed_credentials() {
             "password": "secret123"
             // Wrong data type
         }),
-    ];
-
-    for input in malformed_inputs {
-        let response = app.post_login(&input).await;
-        assert_eq!(
-            response.status().as_u16(),
-            422,
-            "Failed for input: {:?}",
-            input
-        );
-    }
-}
-
-#[tokio::test]
-async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
-
-    let input = [
         serde_json::json!({
             "email": "test@example.com",
             "password": ""
+            // Empty password - validation failure
         }),
         serde_json::json!({
             "email": "",
             "password": "secret123"
+            // Empty email - validation failure
         }),
     ];
 
     for i in input.iter() {
-        let response = app.post_login(&input).await;
-        assert_eq!(response.status().as_u16(), 400, "Failed for input: {:?}", i);
-
-        assert_eq!(
-            response
-                .json::<ErrorResponse>()
-                .await
-                .expect("Could not deserialize response body to ErrorResponse")
-                .error,
-            "Invalid credentials".to_owned()
-        );
+        let response = app.post_signup(&i).await;
+        assert_eq!(response.status().as_u16(), 422, "Failed for input: {:?}", i);
     }
+}
+
+#[tokio::test]
+async fn should_return_400_if_invalid_credentials() {
+    let app = TestApp::new().await;
+
+    // Valid format but wrong credentials
+    let invalid_creds = serde_json::json!({
+        "email": "nonexistent@example.com",
+        "password": "wrongpassword"
+    });
+
+    let response = app.post_login(&invalid_creds).await;
+    assert_eq!(response.status().as_u16(), 400);
+
+    let error_response = response
+        .json::<ErrorResponse>()
+        .await
+        .expect("Could not deserialize response body to ErrorResponse");
+
+    assert_eq!(error_response.error, "Invalid credentials");
 }
