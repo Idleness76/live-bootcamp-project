@@ -48,16 +48,16 @@ async fn should_return_422_if_malformed_credentials() {
 }
 
 #[tokio::test]
-async fn should_return_400_if_invalid_credentials() {
+async fn should_return_400_if_user_does_not_exist() {
     let app = TestApp::new().await;
 
-    // Valid format but wrong credentials
-    let invalid_creds = serde_json::json!({
+    // Valid format but nonexistent user
+    let nonexistent_user_creds = serde_json::json!({
         "email": "nonexistent@example.com",
-        "password": "wrongpassword"
+        "password": "somepassword"
     });
 
-    let response = app.post_login(&invalid_creds).await;
+    let response = app.post_login(&nonexistent_user_creds).await;
     assert_eq!(response.status().as_u16(), 400);
 
     let error_response = response
@@ -66,4 +66,25 @@ async fn should_return_400_if_invalid_credentials() {
         .expect("Could not deserialize response body to ErrorResponse");
 
     assert_eq!(error_response.error, "Invalid credentials");
+}
+
+#[tokio::test]
+async fn should_return_401_if_incorrect_credentials() {
+    let app = TestApp::new().await;
+
+    // First create a user
+    let signup_body = serde_json::json!({
+        "email": "test@example.com",
+        "password": "correct_password"
+    });
+    app.post_signup(&signup_body).await;
+
+    // Try login with wrong password
+    let login_body = serde_json::json!({
+        "email": "test@example.com",
+        "password": "wrong_password"
+    });
+
+    let response = app.post_login(&login_body).await;
+    assert_eq!(response.status().as_u16(), 401);
 }
