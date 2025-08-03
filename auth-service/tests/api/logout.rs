@@ -16,7 +16,7 @@ async fn should_return_400_if_jwt_cookie_missing() {
         .await
         .expect("Failed to parse response body");
 
-    assert_eq!(error_response.error, "Missing auth token");
+    assert_eq!(error_response.error, "Missing token");
 }
 
 #[tokio::test]
