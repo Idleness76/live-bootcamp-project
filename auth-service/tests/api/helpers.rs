@@ -2,7 +2,7 @@ use reqwest::cookie::Jar;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use auth_service::{app_state::AppState, services::HashmapUserStore, Application};
+use auth_service::{app_state::AppState, services::HashmapUserStore, utils::test, Application};
 use uuid::Uuid;
 
 /// Test application wrapper that provides HTTP client functionality for integration tests.
@@ -28,7 +28,7 @@ impl TestApp {
         let app_state = AppState::new(user_store);
 
         // Build application on random port for test isolation
-        let app = Application::build(app_state, "127.0.0.1:0")
+        let app = Application::build(app_state, test::APP_ADDRESS)
             .await
             .expect("Failed to build app");
 
