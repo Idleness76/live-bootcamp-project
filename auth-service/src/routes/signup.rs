@@ -17,10 +17,13 @@ pub async fn signup(
     let password =
         Password::parse(request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
 
-    let user = User::new(email, password, request.requires_2fa);
-
     {
-        let result = state.user_store.write().await.add_user(user).await;
+        let result = state
+            .user_store
+            .write()
+            .await
+            .add_user(User::new(email, password, request.requires_2fa))
+            .await;
 
         match result {
             Ok(()) => {
