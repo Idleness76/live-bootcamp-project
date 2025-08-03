@@ -3,12 +3,9 @@ use chrono::Utc;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Validation};
 use serde::{Deserialize, Serialize};
 
+use super::constants::{JWT_COOKIE_NAME, JWT_SECRET};
 use crate::domain::Email;
 
-use super::constants::JWT_COOKIE_NAME;
-
-// This is definitely NOT a good secret. We will update it soon!
-const JWT_SECRET: &str = "secret";
 // This value determines how long the JWT auth token is valid for
 pub const TOKEN_TTL_SECONDS: i64 = 600; // 10 minutes
 
