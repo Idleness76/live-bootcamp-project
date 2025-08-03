@@ -16,7 +16,7 @@ pub async fn logout(jar: CookieJar) -> (CookieJar, Result<impl IntoResponse, Aut
     let token = cookie.value().to_owned();
 
     match validate_token(&token).await {
-        Ok(_claims) => (jar, Ok(StatusCode::OK)),
+        Ok(_claims) => (jar.remove(JWT_COOKIE_NAME), Ok(StatusCode::OK)),
         Err(_) => (jar, Err(AuthAPIError::InvalidToken)),
     }
 }
