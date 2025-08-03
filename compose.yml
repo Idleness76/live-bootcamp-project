@@ -1,3 +1,4 @@
+version: "3.9"
 services:
   nginx:
     image: nginx:alpine
@@ -26,8 +27,8 @@ services:
     image: idleness76/app-service
     restart: "always"
     environment:
-      - AUTH_SERVICE_HOST_NAME=auth-service
-      - AUTH_SERVICE_IP=auth-service
+      AUTH_SERVICE_IP: ${AUTH_SERVICE_IP}
+      AUTH_SERVICE_HOST_NAME: auth-service
     depends_on:
       auth-service:
         condition: service_started
@@ -37,3 +38,5 @@ services:
       dockerfile: auth-service/Dockerfile
     image: idleness76/auth-service
     restart: "always"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
