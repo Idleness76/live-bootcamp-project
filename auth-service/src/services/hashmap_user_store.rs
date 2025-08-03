@@ -35,6 +35,18 @@ impl UserStore for HashmapUserStore {
             None => Err(UserStoreError::UserNotFound),
         }
     }
+
+    async fn authenticate_user(
+        &self,
+        email: &Email,
+        password: &Password,
+    ) -> Result<User, UserStoreError> {
+        match self.users.get(email) {
+            Some(user) if &user.password == password => Ok(user.clone()),
+            Some(_) => Err(UserStoreError::InvalidCredentials),
+            None => Err(UserStoreError::UserNotFound),
+        }
+    }
 }
 
 #[cfg(test)]
