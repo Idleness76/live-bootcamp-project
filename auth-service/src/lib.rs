@@ -1,6 +1,6 @@
 use app_state::AppState;
 use axum::{
-    http::StatusCode,
+    http::{HeaderValue, Method, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
     serve::Serve,
@@ -9,7 +9,7 @@ use axum::{
 use domain::AuthAPIError;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use tower_http::services::ServeDir;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 
 pub mod app_state;
 pub mod domain;
@@ -32,6 +32,13 @@ impl Application {
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
 
+        let cors = CorsLayer::new()
+            // Allow GET and POST requests
+            .allow_methods([Method::GET, Method::POST])
+            // Allow cookies to be included in requests
+            .allow_credentials(true)
+            .allow_origin("https://idlelgr.duckdns.org".parse::<HeaderValue>()?);
+
         // Create and configure router in one expression to minimize its scope
         let server = axum::serve(
             listener,
@@ -46,7 +53,8 @@ impl Application {
                 .route("/verify-token", post(routes::verify_token))
                 // Serve static files from /assets path instead of root
                 .nest_service("/assets", ServeDir::new("assets"))
-                .with_state(app_state),
+                .with_state(app_state)
+                .layer(cors),
         );
 
         // Return the configured application
