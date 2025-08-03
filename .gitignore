@@ -10,6 +10,12 @@
 *.key
 *.pem
 
+# SSL certificates
+*.pem
+*.key
+/letsencrypt/
+certbot/
+
 # IDE
 .vscode/
 .idea/
