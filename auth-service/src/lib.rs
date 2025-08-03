@@ -15,6 +15,7 @@ pub mod app_state;
 pub mod domain;
 pub mod routes;
 pub mod services;
+pub mod utils;
 
 /// Application struct that encapsulates the HTTP server and its configuration.
 /// This provides a clean separation between server construction and execution.
