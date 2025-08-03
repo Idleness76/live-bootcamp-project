@@ -1,3 +1,4 @@
+use reqwest::cookie::Jar;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -7,9 +8,8 @@ use uuid::Uuid;
 /// Test application wrapper that provides HTTP client functionality for integration tests.
 /// This struct encapsulates a running server instance and an HTTP client for making requests.
 pub struct TestApp {
-    /// Base URL of the running test server (e.g., "http://127.0.0.1:12345")
     pub address: String,
-    /// HTTP client for making requests to the test server
+    pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
 }
 
@@ -35,15 +35,19 @@ impl TestApp {
         // Format the full HTTP address for client requests
         let address = format!("http://{}", app.address.clone());
 
+        let cookie_jar = Arc::new(Jar::default());
+        let http_client = reqwest::Client::builder()
+            .cookie_provider(cookie_jar.clone())
+            .build()
+            .unwrap();
+
         // Start the server in background - we don't need to await it
         #[allow(clippy::let_underscore_future)]
         let _ = tokio::spawn(app.run());
 
-        // Create HTTP client for making test requests
-        let http_client = reqwest::Client::new();
-
         TestApp {
             address,
+            cookie_jar,
             http_client,
         }
     }
