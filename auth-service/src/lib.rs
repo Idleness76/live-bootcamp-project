@@ -32,12 +32,17 @@ impl Application {
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
 
+        let allowed_origins = [
+            "https://idlelgr.duckdns.org".parse::<HeaderValue>()?,
+            "http://localhost:8000".parse::<HeaderValue>()?,
+        ];
+
         let cors = CorsLayer::new()
             // Allow GET and POST requests
             .allow_methods([Method::GET, Method::POST])
             // Allow cookies to be included in requests
             .allow_credentials(true)
-            .allow_origin("https://idlelgr.duckdns.org".parse::<HeaderValue>()?);
+            .allow_origin(allowed_origins);
 
         // Create and configure router in one expression to minimize its scope
         let server = axum::serve(
