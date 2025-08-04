@@ -1,7 +1,15 @@
-use axum::{http::StatusCode, response::IntoResponse};
+use crate::domain::AuthAPIError;
+use axum::{extract::rejection::JsonRejection, http::StatusCode, response::IntoResponse, Json};
+use serde::Deserialize;
 
-/// Handles token validation requests
-/// Currently returns 200 OK as a placeholder implementation
-pub async fn verify_token() -> impl IntoResponse {
-    StatusCode::OK.into_response()
+#[derive(Deserialize)]
+pub struct VerifyTokenRequest {
+    token: String,
+}
+
+pub async fn verify_token(
+    Json(request): Json<VerifyTokenRequest>,
+) -> Result<impl IntoResponse, AuthAPIError> {
+    // TODO: Add actual token verification logic here
+    Ok(StatusCode::OK)
 }

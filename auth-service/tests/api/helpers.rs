@@ -96,18 +96,6 @@ impl TestApp {
             .expect("Failed to execute request.")
     }
 
-    /// Makes a POST request to the 2FA verification endpoint with a token
-    pub async fn post_verify_2fa(&self, token: &str) -> reqwest::Response {
-        self.http_client
-            .post(&format!("{}/verify-2fa", &self.address))
-            .header("Content-Type", "application/json")
-            // Format JSON body with 2FA token
-            .body(format!(r#"{{"token":"{}"}}"#, token))
-            .send()
-            .await
-            .expect("Failed to execute request.")
-    }
-
     /// Makes a POST request to the token verification endpoint
     pub async fn post_verify_token<Body>(&self, body: &Body) -> reqwest::Response
     where
@@ -116,6 +104,18 @@ impl TestApp {
         self.http_client
             .post(format!("{}/verify-token", &self.address))
             .json(body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    /// Makes a POST request to the 2FA verification endpoint with a token
+    pub async fn post_verify_2fa(&self, token: &str) -> reqwest::Response {
+        self.http_client
+            .post(&format!("{}/verify-2fa", &self.address))
+            .header("Content-Type", "application/json")
+            // Format JSON body with 2FA token
+            .body(format!(r#"{{"token":"{}"}}"#, token))
             .send()
             .await
             .expect("Failed to execute request.")
