@@ -2,7 +2,12 @@ use reqwest::cookie::Jar;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use auth_service::{app_state::AppState, services::HashmapUserStore, utils::test, Application};
+use auth_service::{
+    app_state::AppState,
+    services::{HashmapUserStore, HashsetBannedTokenStore},
+    utils::test,
+    Application,
+};
 use uuid::Uuid;
 
 /// Test application wrapper that provides HTTP client functionality for integration tests.
@@ -25,7 +30,8 @@ impl TestApp {
     /// A configured `TestApp` instance ready for testing
     pub async fn new() -> Self {
         let user_store = Arc::new(RwLock::new(HashmapUserStore::default()));
-        let app_state = AppState::new(user_store);
+        let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::default()));
+        let app_state = AppState::new(user_store, banned_token_store);
 
         // Build application on random port for test isolation
         let app = Application::build(app_state, test::APP_ADDRESS)
