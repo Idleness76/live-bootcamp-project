@@ -109,12 +109,13 @@ impl TestApp {
     }
 
     /// Makes a POST request to the token verification endpoint
-    pub async fn post_verify_token(&self, token: &str) -> reqwest::Response {
+    pub async fn post_verify_token<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
         self.http_client
-            .post(&format!("{}/verify-token", &self.address))
-            .header("Content-Type", "application/json")
-            // Format JSON body with token to verify
-            .body(format!(r#"{{"token":"{}"}}"#, token))
+            .post(format!("{}/verify-token", &self.address))
+            .json(body)
             .send()
             .await
             .expect("Failed to execute request.")
