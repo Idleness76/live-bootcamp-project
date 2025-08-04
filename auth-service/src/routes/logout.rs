@@ -18,18 +18,14 @@ pub async fn logout(
 
     let token = cookie.value();
 
-    if validate_token(&token).await.is_err() {
+    // Get write lock once and keep it
+    let mut banned_store = app_state.banned_token_store.write().await;
+
+    if let Err(_) = validate_token(&token, &*banned_store).await {
         return (jar, Err(AuthAPIError::InvalidToken));
     }
 
-    if app_state
-        .banned_token_store
-        .write()
-        .await
-        .add_banned_token(token)
-        .await
-        .is_err()
-    {
+    if let Err(_) = banned_store.add_banned_token(token).await {
         return (jar, Err(AuthAPIError::UnexpectedError));
     }
 
