@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use auth_service::{
-    app_state::{AppState, BannedTokenStoreType},
+    app_state::AppState,
     services::{HashmapUserStore, HashsetBannedTokenStore},
     utils::test,
     Application,
@@ -16,7 +16,7 @@ pub struct TestApp {
     pub address: String,
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
-    pub banned_token_store: BannedTokenStoreType,
+    pub banned_token_store: Arc<RwLock<HashsetBannedTokenStore>>,
 }
 
 impl TestApp {

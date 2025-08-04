@@ -1,4 +1,5 @@
-use auth_service::{utils::JWT_COOKIE_NAME, ErrorResponse};
+use auth_service::domain::BannedTokenStore;
+use auth_service::{domain::ErrorResponse, utils::JWT_COOKIE_NAME};
 use reqwest::cookie::CookieStore;
 use reqwest::Url;
 
