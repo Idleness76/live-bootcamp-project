@@ -1,20 +1,20 @@
+use crate::domain::{BannedTokenStore, UserStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::domain::{BannedTokenStore, UserStore};
-
-// Using trait objects with Arc<RwLock<dyn UserStore>>
-pub type UserStoreType = Arc<RwLock<dyn UserStore + Send + Sync>>;
-pub type BannedTokenStoreType = Arc<RwLock<dyn BannedTokenStore + Send + Sync>>;
-
+/// Application state holding shared stores for users and banned tokens.
 #[derive(Clone)]
 pub struct AppState {
-    pub user_store: UserStoreType,
-    pub banned_token_store: BannedTokenStoreType,
+    pub user_store: Arc<RwLock<dyn UserStore + Send + Sync>>,
+    pub banned_token_store: Arc<RwLock<dyn BannedTokenStore + Send + Sync>>,
 }
 
 impl AppState {
-    pub fn new(user_store: UserStoreType, banned_token_store: BannedTokenStoreType) -> Self {
+    /// Creates a new `AppState` with the given stores.
+    pub fn new(
+        user_store: Arc<RwLock<dyn UserStore + Send + Sync>>,
+        banned_token_store: Arc<RwLock<dyn BannedTokenStore + Send + Sync>>,
+    ) -> Self {
         Self {
             user_store,
             banned_token_store,
