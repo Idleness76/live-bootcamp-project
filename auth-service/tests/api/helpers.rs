@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use auth_service::{
-    app_state::AppState,
+    app_state::{AppState, BannedTokenStoreType},
     services::{HashmapUserStore, HashsetBannedTokenStore},
     utils::test,
     Application,
@@ -16,6 +16,7 @@ pub struct TestApp {
     pub address: String,
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
+    pub banned_token_store: BannedTokenStoreType,
 }
 
 impl TestApp {
@@ -31,7 +32,7 @@ impl TestApp {
     pub async fn new() -> Self {
         let user_store = Arc::new(RwLock::new(HashmapUserStore::default()));
         let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::default()));
-        let app_state = AppState::new(user_store, banned_token_store);
+        let app_state = AppState::new(user_store.clone(), banned_token_store.clone());
 
         // Build application on random port for test isolation
         let app = Application::build(app_state, test::APP_ADDRESS)
@@ -55,6 +56,7 @@ impl TestApp {
             address,
             cookie_jar,
             http_client,
+            banned_token_store,
         }
     }
 
