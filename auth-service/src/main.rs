@@ -1,6 +1,8 @@
 use auth_service::{
-    app_state::AppState, services::HashmapUserStore, services::HashsetBannedTokenStore,
-    utils::prod, Application,
+    app_state::AppState,
+    services::{HashmapUserStore, HashsetBannedTokenStore},
+    utils::prod,
+    Application,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;

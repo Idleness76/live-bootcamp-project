@@ -1,13 +1,12 @@
 use app_state::AppState;
 use axum::{
-    http::{HeaderValue, Method, StatusCode},
-    response::{Html, IntoResponse, Response},
+    http::{HeaderValue, Method},
+    response::Html,
     routing::{get, post},
     serve::Serve,
-    Json, Router,
+    Router,
 };
-use domain::AuthAPIError;
-use serde::{Deserialize, Serialize};
+
 use std::error::Error;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
@@ -17,12 +16,8 @@ pub mod routes;
 pub mod services;
 pub mod utils;
 
-/// Application struct that encapsulates the HTTP server and its configuration.
-/// This provides a clean separation between server construction and execution.
 pub struct Application {
-    /// The configured Axum server instance ready to be started
     server: Serve<Router, Router>,
-    /// The actual address the server is bound to (useful for testing with random ports)
     pub address: String,
 }
 
@@ -73,30 +68,4 @@ impl Application {
 
 async fn serve_index() -> Html<&'static str> {
     Html(include_str!("../assets/index.html"))
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ErrorResponse {
-    pub error: String,
-}
-
-impl IntoResponse for AuthAPIError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            AuthAPIError::UserAlreadyExists => (StatusCode::CONFLICT, "User already exists"),
-            AuthAPIError::InvalidCredentials => (StatusCode::BAD_REQUEST, "Invalid credentials"),
-            AuthAPIError::IncorrectCredentials => {
-                (StatusCode::UNAUTHORIZED, "Incorrect credentials")
-            }
-            AuthAPIError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token"),
-            AuthAPIError::MissingToken => (StatusCode::BAD_REQUEST, "Missing token"),
-            AuthAPIError::UnexpectedError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
-            }
-        };
-        let body = Json(ErrorResponse {
-            error: error_message.to_string(),
-        });
-        (status, body).into_response()
-    }
 }

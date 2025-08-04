@@ -1,11 +1,10 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse};
-use axum_extra::extract::CookieJar;
-
 use crate::{
     app_state::AppState,
     domain::AuthAPIError,
     utils::{validate_token, JWT_COOKIE_NAME},
 };
+use axum::{extract::State, http::StatusCode, response::IntoResponse};
+use axum_extra::extract::CookieJar;
 
 pub async fn logout(
     State(app_state): State<AppState>,
