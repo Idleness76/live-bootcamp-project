@@ -26,6 +26,8 @@ fn set_token() -> String {
 
 pub mod env {
     pub const JWT_SECRET_ENV_VAR: &str = "JWT_SECRET";
+    pub const ALLOWED_ORIGINS_ENV_VAR: &str = "ALLOWED_ORIGINS";
 }
 
 pub const JWT_COOKIE_NAME: &str = "jwt";
+pub const DEFAULT_ALLOWED_ORIGINS: &str = "https://idlelgr.duckdns.org,http://localhost:8000";
