@@ -61,7 +61,7 @@ fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
     create_token(&claims).map_err(GenerateTokenError::TokenError)
 }
 
-// Check if JWT auth token is valid by decoding it using the JWT secret
+/// Check if JWT auth token is valid by decoding it using the JWT secret
 pub async fn validate_token(
     token: &str,
     banned_store: &dyn BannedTokenStore,
@@ -85,6 +85,16 @@ pub async fn validate_token(
     }
 
     Ok(token_data.claims)
+}
+
+/// Decode JWT and return claims without consulting banned store.
+pub fn decode_claims(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
+    Ok(decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &Validation::default(),
+    )?
+    .claims)
 }
 
 // Create JWT auth token by encoding claims using the JWT secret
