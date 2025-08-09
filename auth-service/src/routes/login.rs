@@ -1,6 +1,6 @@
 use crate::{
     app_state::AppState,
-    domain::{AuthAPIError, Email},
+    domain::{AuthAPIError, Email, LoginAttemptId, TwoFACode},
     utils::generate_auth_cookie,
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
@@ -27,9 +27,10 @@ pub async fn login(
         .map_err(|_| AuthAPIError::IncorrectCredentials)?;
 
     let (jar, resp) = match user.requires_2fa {
-        true => handle_2fa(&user.email, jar).await?,
-        false => handle_no_2fa(&user.email, jar).await?,
+        true => handle_2fa(&user.email, &state, jar).await,
+        false => handle_no_2fa(&user.email, jar).await,
     };
+    let resp = resp?; // propagate error if any
     Ok((jar, resp.into_response()))
 }
 
@@ -49,32 +50,53 @@ pub struct TwoFactorAuthResponse {
 
 async fn handle_2fa(
     email: &Email,
+    state: &AppState,
     jar: CookieJar,
-) -> Result<(CookieJar, axum::response::Response), AuthAPIError> {
-    let auth_cookie = generate_auth_cookie(email).map_err(|_| AuthAPIError::UnexpectedError)?;
-    let updated_jar = jar.add(auth_cookie);
-    let resp = TwoFactorAuthResponse {
-        message: "2FA required".to_string(),
-        login_attempt_id: "123456".to_string(),
+) -> (
+    CookieJar,
+    Result<(StatusCode, Json<LoginResponse>), AuthAPIError>,
+) {
+    let login_attempt_id = LoginAttemptId::default();
+    let two_fa_code = TwoFACode::default();
+
+    let add_result = state
+        .two_fa_code_store
+        .write()
+        .await
+        .add_code(email.clone(), login_attempt_id.clone(), two_fa_code.clone())
+        .await;
+    if let Err(_) = add_result {
+        return (jar, Err(AuthAPIError::UnexpectedError));
+    }
+
+    let auth_cookie = match generate_auth_cookie(email) {
+        Ok(cookie) => cookie,
+        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
     };
-    Ok((
-        updated_jar,
-        (
-            StatusCode::PARTIAL_CONTENT,
-            Json(LoginResponse::TwoFactorAuth(resp)),
-        )
-            .into_response(),
-    ))
+    let updated_jar = jar.add(auth_cookie);
+
+    let response = Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
+        message: "2FA required".to_owned(),
+        login_attempt_id: login_attempt_id.as_ref().to_owned(),
+    }));
+
+    (updated_jar, Ok((StatusCode::PARTIAL_CONTENT, response)))
 }
 
 async fn handle_no_2fa(
     email: &Email,
     jar: CookieJar,
-) -> Result<(CookieJar, axum::response::Response), AuthAPIError> {
-    let auth_cookie = generate_auth_cookie(email).map_err(|_| AuthAPIError::UnexpectedError)?;
+) -> (
+    CookieJar,
+    Result<(StatusCode, Json<LoginResponse>), AuthAPIError>,
+) {
+    let auth_cookie = match generate_auth_cookie(email) {
+        Ok(cookie) => cookie,
+        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+    };
     let updated_jar = jar.add(auth_cookie);
-    Ok((
+    (
         updated_jar,
-        (StatusCode::OK, Json(LoginResponse::RegularAuth)).into_response(),
-    ))
+        Ok((StatusCode::OK, Json(LoginResponse::RegularAuth))),
+    )
 }
