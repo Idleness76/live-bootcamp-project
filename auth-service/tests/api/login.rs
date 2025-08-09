@@ -1,5 +1,5 @@
 use crate::helpers::{get_random_email, TestApp};
-use auth_service::{domain::ErrorResponse, utils::JWT_COOKIE_NAME};
+use auth_service::{domain::ErrorResponse, routes::TwoFactorAuthResponse, utils::JWT_COOKIE_NAME};
 
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials() {
@@ -138,7 +138,6 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     });
 
     let response = app.post_signup(&signup_body).await;
-
     assert_eq!(response.status().as_u16(), 201);
 
     let login_body = serde_json::json!({
@@ -147,13 +146,17 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     });
 
     let response = app.post_login(&login_body).await;
-
     assert_eq!(response.status().as_u16(), 206);
 
     let auth_cookie = response
         .cookies()
         .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
         .expect("No auth cookie found");
-
     assert!(!auth_cookie.value().is_empty());
+
+    let two_fa_resp = response
+        .json::<TwoFactorAuthResponse>()
+        .await
+        .expect("Could not deserialize response body to TwoFactorAuthResponse");
+    assert_eq!(two_fa_resp.message, "2FA required".to_owned());
 }
