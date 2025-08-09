@@ -57,7 +57,7 @@ pub trait TwoFACodeStore {
 
 #[derive(Debug, PartialEq)]
 pub enum TwoFACodeStoreError {
-    LoginAttemptdNotFound,
+    LoginAttemptIdNotFound,
     UnexpectedError,
 }
 
