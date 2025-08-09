@@ -36,13 +36,13 @@ impl UserStore for HashmapUserStore {
         }
     }
 
-    async fn authenticate_user(
-        &self,
-        email: &Email,
-        password: &Password,
-    ) -> Result<User, UserStoreError> {
-        match self.users.get(email) {
-            Some(user) if &user.password == password => Ok(user.clone()),
+    async fn authenticate_user(&self, email: &str, password: &str) -> Result<User, UserStoreError> {
+        let email =
+            Email::parse(email.to_owned()).map_err(|_| UserStoreError::InvalidCredentials)?;
+        let password =
+            Password::parse(password.to_owned()).map_err(|_| UserStoreError::InvalidCredentials)?;
+        match self.users.get(&email) {
+            Some(user) if user.password == password => Ok(user.clone()),
             Some(_) => Err(UserStoreError::InvalidCredentials),
             None => Err(UserStoreError::UserNotFound),
         }

@@ -48,7 +48,7 @@ async fn should_return_422_if_malformed_credentials() {
 }
 
 #[tokio::test]
-async fn should_return_400_if_user_does_not_exist() {
+async fn should_return_401_if_user_does_not_exist() {
     let app = TestApp::new().await;
 
     // Valid format but nonexistent user
@@ -58,14 +58,14 @@ async fn should_return_400_if_user_does_not_exist() {
     });
 
     let response = app.post_login(&nonexistent_user_creds).await;
-    assert_eq!(response.status().as_u16(), 400);
+    assert_eq!(response.status().as_u16(), 401);
 
     let error_response = response
         .json::<ErrorResponse>()
         .await
         .expect("Could not deserialize response body to ErrorResponse");
 
-    assert_eq!(error_response.error, "Invalid credentials");
+    assert_eq!(error_response.error, "Incorrect credentials");
 }
 
 #[tokio::test]
