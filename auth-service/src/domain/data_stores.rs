@@ -36,3 +36,70 @@ pub trait BannedTokenStore: Send + Sync {
 pub enum BannedTokenStoreError {
     UnexpectedError,
 }
+
+// NOTE: We are using the "parse don't validate" principle.
+// LoginAttemptId and TwoFACode are wrappers around a string type, similar to the Email and Password types.
+
+#[async_trait::async_trait]
+pub trait TwoFACodeStore {
+    async fn add_code(
+        &mut self,
+        email: Email,
+        login_attempt_id: LoginAttemptId,
+        code: TwoFACode,
+    ) -> Result<(), TwoFACodeStoreError>;
+    async fn remove_code(&mut self, email: &Email) -> Result<(), TwoFACodeStoreError>;
+    async fn get_code(
+        &self,
+        email: &Email,
+    ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>;
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TwoFACodeStoreError {
+    LoginAttemptdNotFound,
+    UnexpectedError,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoginAttemptId(String);
+
+impl Default for LoginAttemptId {
+    fn default() -> Self {
+        Self(uuid::Uuid::new_v4().to_string())
+    }
+}
+
+impl AsRef<str> for LoginAttemptId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TwoFACode(String);
+
+impl TwoFACode {
+    pub fn parse(code: &str) -> Result<Self, String> {
+        if code.len() == 6 && code.chars().all(|c| c.is_digit(10)) {
+            Ok(Self(code.to_string()))
+        } else {
+            Err("Invalid 2FA code format".to_string())
+        }
+    }
+}
+
+impl Default for TwoFACode {
+    fn default() -> Self {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let code: u32 = rng.gen_range(0..1_000_000);
+        Self(format!("{:06}", code))
+    }
+}
+
+impl AsRef<str> for TwoFACode {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
