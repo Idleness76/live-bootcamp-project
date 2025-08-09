@@ -21,15 +21,6 @@ pub struct TestApp {
 }
 
 impl TestApp {
-    /// Creates a new test application instance with a server running on a random port.
-    ///
-    /// This method:
-    /// 1. Builds the application on a random available port (127.0.0.1:0)
-    /// 2. Spawns the server in a background task
-    /// 3. Creates an HTTP client for making test requests
-    ///
-    /// # Returns
-    /// A configured `TestApp` instance ready for testing
     pub async fn new() -> Self {
         let user_store = Arc::new(RwLock::new(HashmapUserStore::default()));
         let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::default()));
