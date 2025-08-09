@@ -1,5 +1,9 @@
 use crate::helpers::{get_random_email, TestApp};
-use auth_service::{domain::ErrorResponse, routes::TwoFactorAuthResponse, utils::JWT_COOKIE_NAME};
+use auth_service::{
+    domain::{ErrorResponse, TwoFACodeStore},
+    routes::TwoFactorAuthResponse,
+    utils::JWT_COOKIE_NAME,
+};
 
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials() {
@@ -130,6 +134,8 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     let app = TestApp::new().await;
 
     let random_email = get_random_email();
+    let email =
+        auth_service::domain::Email::parse(random_email.clone()).expect("Failed to parse email");
 
     let signup_body = serde_json::json!({
         "email": random_email,
@@ -159,4 +165,16 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
         .await
         .expect("Could not deserialize response body to TwoFactorAuthResponse");
     assert_eq!(two_fa_resp.message, "2FA required".to_owned());
+
+    // Assert that login_attempt_id is stored in two_fa_code_store
+    let store = app.two_fa_code_store.read().await;
+    let (stored_attempt_id, _) = store
+        .get_code(&email)
+        .await
+        .expect("2FA code not found for email");
+    assert_eq!(
+        stored_attempt_id.as_ref(),
+        two_fa_resp.login_attempt_id,
+        "Stored login_attempt_id does not match response"
+    );
 }
