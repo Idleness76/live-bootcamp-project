@@ -13,6 +13,20 @@ pub struct LoginRequest {
     pub password: String,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum LoginResponse {
+    RegularAuth,
+    TwoFactorAuth(TwoFactorAuthResponse),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TwoFactorAuthResponse {
+    pub message: String,
+    #[serde(rename = "loginAttemptId")]
+    pub login_attempt_id: String,
+}
+
 pub async fn login(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -32,20 +46,6 @@ pub async fn login(
     };
     let resp = resp?; // propagate error if any
     Ok((jar, resp.into_response()))
-}
-
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
-pub enum LoginResponse {
-    RegularAuth,
-    TwoFactorAuth(TwoFactorAuthResponse),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TwoFactorAuthResponse {
-    pub message: String,
-    #[serde(rename = "loginAttemptId")]
-    pub login_attempt_id: String,
 }
 
 async fn handle_2fa(
