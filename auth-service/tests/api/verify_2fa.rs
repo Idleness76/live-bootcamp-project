@@ -116,3 +116,37 @@ async fn should_return_200_if_correct_code() {
         JWT_COOKIE_NAME
     );
 }
+
+#[tokio::test]
+async fn should_return_401_if_same_code_twice() {
+    let app = TestApp::new().await;
+    let email = get_random_email();
+    let parsed_email = auth_service::domain::Email::parse(email.clone()).expect("Invalid email");
+    let login_attempt_id = LoginAttemptId::default();
+    let two_fa_code = TwoFACode::default();
+
+    app.two_fa_code_store
+        .write()
+        .await
+        .add_code(
+            parsed_email.clone(),
+            login_attempt_id.clone(),
+            two_fa_code.clone(),
+        )
+        .await
+        .expect("Failed to store two_fa_code");
+
+    let body = serde_json::json!({
+        "email": parsed_email.as_ref(),
+        "login_attempt_id": login_attempt_id.as_ref(),
+        "two_fa_code": two_fa_code.as_ref()
+    });
+
+    // First attempt should succeed
+    let response = app.post_verify_2fa(&body).await;
+    assert_eq!(response.status().as_u16(), 200);
+
+    // Second attempt with the same code should fail
+    let response = app.post_verify_2fa(&body).await;
+    assert_eq!(response.status().as_u16(), 401);
+}
