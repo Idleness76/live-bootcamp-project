@@ -29,6 +29,17 @@ pub async fn verify_2fa(
         return (jar, Err(AuthAPIError::IncorrectCredentials));
     }
 
+    match state
+        .two_fa_code_store
+        .write()
+        .await
+        .remove_code(&email)
+        .await
+    {
+        Ok(()) => (),
+        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+    };
+
     let auth_cookie = match generate_auth_cookie(&email) {
         Ok(cookie) => cookie,
         Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
