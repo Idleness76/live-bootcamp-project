@@ -3,7 +3,7 @@ members = ["app-service", "auth-service"]
 resolver = "2"
 
 [workspace.dependencies]
-axum = "0.7.9"
+axum = { version = "0.7.9", features = ["macros"] }
 axum-extra = { version = "0.9.6", features = ["cookie"] }
 tokio = { version = "1.46.1", features = ["full"] }
 tower-http = { version = "0.5.2", features = ["fs", "cors"] }
