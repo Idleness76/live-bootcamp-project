@@ -48,8 +48,9 @@ async fn should_return_401_if_incorrect_credentials() {
     let login_attempt_id = LoginAttemptId::default();
 
     let body = serde_json::json!({
-        "login_attempt_id": login_attempt_id,
-        "code": "wrong-code"
+        "email": "user@example.com",
+        "login_attempt_id": login_attempt_id.as_ref(),
+        "two_fa_code": "wrong-code"
     });
 
     let response = app.post_verify_2fa(&body).await;
@@ -64,8 +65,9 @@ async fn should_return_401_if_user_does_not_exist() {
     let login_attempt_id = LoginAttemptId::default();
 
     let body = serde_json::json!({
-        "login_attempt_id": login_attempt_id,
-        "code": "123456"
+        "email": "user@example.com",
+        "login_attempt_id": login_attempt_id.as_ref(),
+        "two_fa_code": "123456"
     });
 
     let response = app.post_verify_2fa(&body).await;
