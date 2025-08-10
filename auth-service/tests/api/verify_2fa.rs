@@ -52,8 +52,8 @@ async fn should_return_401_if_incorrect_credentials() {
 
     let body = serde_json::json!({
         "email": "user@example.com",
-        "login_attempt_id": login_attempt_id.as_ref(),
-        "two_fa_code": "wrong-code"
+        "loginAttemptId": login_attempt_id.as_ref(),
+        "2FACode": "wrong-code"
     });
 
     let response = app.post_verify_2fa(&body).await;
@@ -69,8 +69,8 @@ async fn should_return_401_if_user_does_not_exist() {
 
     let body = serde_json::json!({
         "email": "user@example.com",
-        "login_attempt_id": login_attempt_id.as_ref(),
-        "two_fa_code": "123456"
+        "loginAttemptId": login_attempt_id.as_ref(),
+        "2FACode": "123456"
     });
 
     let response = app.post_verify_2fa(&body).await;
@@ -98,8 +98,8 @@ async fn should_return_200_if_correct_code() {
 
     let body = serde_json::json!({
         "email": parsed_email.as_ref(),
-        "login_attempt_id": login_attempt_id.as_ref(),
-        "two_fa_code": two_fa_code.as_ref()
+        "loginAttemptId": login_attempt_id.as_ref(),
+        "2FACode": two_fa_code.as_ref()
     });
 
     let response = app.post_verify_2fa(&body).await;
@@ -138,8 +138,8 @@ async fn should_return_401_if_same_code_twice() {
 
     let body = serde_json::json!({
         "email": parsed_email.as_ref(),
-        "login_attempt_id": login_attempt_id.as_ref(),
-        "two_fa_code": two_fa_code.as_ref()
+        "loginAttemptId": login_attempt_id.as_ref(),
+        "2FACode": two_fa_code.as_ref()
     });
 
     // First attempt should succeed
