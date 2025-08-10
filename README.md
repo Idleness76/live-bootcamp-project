@@ -12,3 +12,6 @@ visit http://localhost/app and http://localhost/auth
 ```bash
 cargo nextest run
 ```
+
+## Prod server instance
+visit https://idlelgr.duckdns.org/app and https://idlelgr.duckdns.org/auth
