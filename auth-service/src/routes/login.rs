@@ -80,18 +80,12 @@ async fn handle_2fa(
         return (jar, Err(AuthAPIError::UnexpectedError));
     }
 
-    let auth_cookie = match generate_auth_cookie(email) {
-        Ok(cookie) => cookie,
-        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
-    };
-    let updated_jar = jar.add(auth_cookie);
-
     let response = Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
         message: "2FA required".to_owned(),
         login_attempt_id: login_attempt_id.as_ref().to_owned(),
     }));
 
-    (updated_jar, Ok((StatusCode::PARTIAL_CONTENT, response)))
+    (jar, Ok((StatusCode::PARTIAL_CONTENT, response)))
 }
 
 async fn handle_no_2fa(

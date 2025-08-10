@@ -78,7 +78,7 @@ impl AsRef<str> for LoginAttemptId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TwoFACode(String);
 
 impl TwoFACode {

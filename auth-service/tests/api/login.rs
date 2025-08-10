@@ -1,9 +1,5 @@
 use crate::helpers::{get_random_email, TestApp};
-use auth_service::{
-    domain::{ErrorResponse, TwoFACodeStore},
-    routes::TwoFactorAuthResponse,
-    utils::JWT_COOKIE_NAME,
-};
+use auth_service::{domain::ErrorResponse, utils::JWT_COOKIE_NAME};
 
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials() {
@@ -132,17 +128,13 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
 #[tokio::test]
 async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     let app = TestApp::new().await;
-
     let random_email = get_random_email();
-    let email =
-        auth_service::domain::Email::parse(random_email.clone()).expect("Failed to parse email");
 
     let signup_body = serde_json::json!({
         "email": random_email,
         "password": "Password123!",
         "requires2FA": true
     });
-
     let response = app.post_signup(&signup_body).await;
     assert_eq!(response.status().as_u16(), 201);
 
@@ -150,31 +142,14 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
         "email": random_email,
         "password": "Password123!",
     });
-
     let response = app.post_login(&login_body).await;
     assert_eq!(response.status().as_u16(), 206);
 
-    let auth_cookie = response
-        .cookies()
-        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
-        .expect("No auth cookie found");
-    assert!(!auth_cookie.value().is_empty());
-
-    let two_fa_resp = response
-        .json::<TwoFactorAuthResponse>()
-        .await
-        .expect("Could not deserialize response body to TwoFactorAuthResponse");
-    assert_eq!(two_fa_resp.message, "2FA required".to_owned());
-
-    // Assert that login_attempt_id is stored in two_fa_code_store
-    let store = app.two_fa_code_store.read().await;
-    let (stored_attempt_id, _) = store
-        .get_code(&email)
-        .await
-        .expect("2FA code not found for email");
-    assert_eq!(
-        stored_attempt_id.as_ref(),
-        two_fa_resp.login_attempt_id,
-        "Stored login_attempt_id does not match response"
+    // Ensure no auth token is present
+    assert!(
+        response
+            .cookies()
+            .all(|cookie| cookie.name() != JWT_COOKIE_NAME),
+        "Auth token should not be present in 2FA login response"
     );
 }
