@@ -18,6 +18,7 @@ pub struct TestApp {
     pub http_client: reqwest::Client,
     pub banned_token_store: Arc<RwLock<HashsetBannedTokenStore>>,
     pub two_fa_code_store: Arc<RwLock<HashmapTwoFACodeStore>>,
+    pub email_client: Arc<MockEmailClient>,
 }
 
 impl TestApp {
@@ -30,7 +31,7 @@ impl TestApp {
             user_store.clone(),
             banned_token_store.clone(),
             two_fa_code_store.clone(),
-            email_client,
+            email_client.clone(),
         );
 
         // Build application on random port for test isolation
@@ -57,6 +58,7 @@ impl TestApp {
             http_client,
             banned_token_store,
             two_fa_code_store,
+            email_client,
         }
     }
 
