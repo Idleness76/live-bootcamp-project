@@ -39,3 +39,35 @@ async fn should_return_422_if_malformed_input() {
         );
     }
 }
+
+#[tokio::test]
+async fn should_return_401_if_incorrect_credentials() {
+    let app = TestApp::new().await;
+
+    // Simulate a valid login attempt (you may need to create one in your setup)
+    let login_attempt_id = LoginAttemptId::default();
+
+    let body = serde_json::json!({
+        "login_attempt_id": login_attempt_id,
+        "code": "wrong-code"
+    });
+
+    let response = app.post_verify_2fa(&body).await;
+    assert_eq!(response.status().as_u16(), 401);
+}
+
+#[tokio::test]
+async fn should_return_401_if_user_does_not_exist() {
+    let app = TestApp::new().await;
+
+    // Use a random login_attempt_id that doesn't exist
+    let login_attempt_id = LoginAttemptId::default();
+
+    let body = serde_json::json!({
+        "login_attempt_id": login_attempt_id,
+        "code": "123456"
+    });
+
+    let response = app.post_verify_2fa(&body).await;
+    assert_eq!(response.status().as_u16(), 401);
+}
