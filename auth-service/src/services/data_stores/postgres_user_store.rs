@@ -33,10 +33,10 @@ impl UserStore for PostgresUserStore {
 
         let result = sqlx::query!(
             r#"
-        INSERT INTO users (email, password_hash, requires_2fa)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (email) DO NOTHING
-        "#,
+            INSERT INTO users (email, password_hash, requires_2fa)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (email) DO NOTHING
+            "#,
             user.email.as_ref(),
             password_hash,
             user.requires_2fa
