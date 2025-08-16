@@ -22,6 +22,7 @@ services:
     depends_on:
       auth-service:
         condition: service_started
+  
   auth-service:
     build:
       context: .
@@ -30,3 +31,20 @@ services:
     restart: "always"
     environment:
       JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@db:5432"
+    depends_on:
+      db
+
+  db:
+    image: postgres:alpine
+    restart: "always"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+
+volumes:
+  db:
+    driver: local
