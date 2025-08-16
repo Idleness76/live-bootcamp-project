@@ -1,3 +1,5 @@
+use sqlx::{postgres::PgValueRef, Decode, Postgres, Type};
+
 #[derive(Debug, serde::Deserialize, Clone, PartialEq)]
 pub struct Password(String);
 
@@ -34,6 +36,20 @@ impl Password {
         }
 
         Ok(Password(s.to_string()))
+    }
+}
+
+// Manual impls for sqlx traits
+impl<'r> Decode<'r, Postgres> for Password {
+    fn decode(value: PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <String as Decode<Postgres>>::decode(value)?;
+        Password::parse(s).map_err(|e| e.into())
+    }
+}
+
+impl Type<Postgres> for Password {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        <String as Type<Postgres>>::type_info()
     }
 }
 

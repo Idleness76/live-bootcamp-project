@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sqlx::{postgres::PgValueRef, Decode, Postgres, Type};
 use validator::validate_email;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
@@ -17,6 +18,20 @@ impl Email {
         } else {
             Err(format!("{} is not a valid email.", s))
         }
+    }
+}
+
+// Manual impls for sqlx traits
+impl<'r> Decode<'r, Postgres> for Email {
+    fn decode(value: PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <String as Decode<Postgres>>::decode(value)?;
+        Email::parse(s).map_err(|e| e.into())
+    }
+}
+
+impl Type<Postgres> for Email {
+    fn type_info() -> sqlx::postgres::PgTypeInfo {
+        <String as Type<Postgres>>::type_info()
     }
 }
 

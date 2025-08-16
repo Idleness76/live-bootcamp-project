@@ -1,6 +1,8 @@
+use sqlx::prelude::FromRow;
+
 use crate::domain::{Email, Password};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, FromRow)]
 pub struct User {
     pub email: Email,
     pub password: Password,

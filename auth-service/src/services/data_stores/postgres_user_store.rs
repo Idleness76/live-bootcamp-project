@@ -19,6 +19,11 @@ impl PostgresUserStore {
     }
 }
 
+#[derive(sqlx::FromRow)]
+struct UserPasswordRow {
+    password_hash: String,
+}
+
 #[async_trait::async_trait]
 impl UserStore for PostgresUserStore {
     async fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
@@ -26,19 +31,19 @@ impl UserStore for PostgresUserStore {
             .await
             .map_err(|_| UserStoreError::UnexpectedError)?;
 
-        let query = r#"
+        let result = sqlx::query!(
+            r#"
         INSERT INTO users (email, password_hash, requires_2fa)
         VALUES ($1, $2, $3)
         ON CONFLICT (email) DO NOTHING
-        "#;
-
-        let result = sqlx::query(query)
-            .bind(user.email.as_ref())
-            .bind(password_hash)
-            .bind(user.requires_2fa)
-            .execute(&self.pool)
-            .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
+        "#,
+            user.email.as_ref(),
+            password_hash,
+            user.requires_2fa
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|_| UserStoreError::UnexpectedError)?;
 
         if result.rows_affected() == 0 {
             return Err(UserStoreError::UserAlreadyExists);
@@ -48,31 +53,20 @@ impl UserStore for PostgresUserStore {
     }
 
     async fn get_user(&self, email: &Email) -> Result<User, UserStoreError> {
-        let query = r#"
-        SELECT * FROM users
+        let row = sqlx::query_as!(
+            User,
+            r#"
+        SELECT email as "email: _", password_hash as "password: _", requires_2fa
+        FROM users
         WHERE email = $1
-        "#;
+        "#,
+            email.as_ref()
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| UserStoreError::UnexpectedError)?;
 
-        let row = sqlx::query(query)
-            .bind(email.as_ref())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
-
-        let row = match row {
-            Some(row) => row,
-            None => return Err(UserStoreError::UserNotFound),
-        };
-
-        let user = User {
-            email: Email::parse(row.get::<&str, _>("email").to_string())
-                .map_err(|_| UserStoreError::UnexpectedError)?,
-            password: Password::parse(row.get::<&str, _>("password_hash").to_string())
-                .map_err(|_| UserStoreError::UnexpectedError)?,
-            requires_2fa: row.get::<bool, _>("requires_2fa"),
-        };
-
-        Ok(user)
+        row.ok_or(UserStoreError::UserNotFound)
     }
 
     async fn validate_user(
@@ -80,60 +74,52 @@ impl UserStore for PostgresUserStore {
         email: &Email,
         password: &Password,
     ) -> Result<(), UserStoreError> {
-        let query = r#"
-        SELECT password_hash FROM users
-        WHERE email = $1
-        "#;
-
-        let row = sqlx::query(query)
-            .bind(email.as_ref())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
+        let row = sqlx::query_as!(
+            UserPasswordRow,
+            r#"
+        SELECT password_hash FROM users WHERE email = $1
+        "#,
+            email.as_ref()
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| UserStoreError::UnexpectedError)?;
 
         let password_hash = match row {
-            Some(row) => row.get::<&str, _>("password_hash").to_string(),
+            Some(row) => row.password_hash,
             None => return Err(UserStoreError::UserNotFound),
         };
 
-        verify_password_hash(password_hash.to_string(), password.as_ref().to_string())
+        verify_password_hash(password_hash, password.as_ref().to_string())
             .await
             .map_err(|_| UserStoreError::InvalidCredentials)
     }
 
     async fn authenticate_user(&self, email: &str, password: &str) -> Result<User, UserStoreError> {
-        let email =
-            Email::parse(email.to_owned()).map_err(|_| UserStoreError::InvalidCredentials)?;
-        let password =
-            Password::parse(password.to_owned()).map_err(|_| UserStoreError::InvalidCredentials)?;
-
-        let query = r#"
-        SELECT * FROM users
-        WHERE email = $1
-        "#;
-
-        let row = sqlx::query(query)
-            .bind(email.as_ref())
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
-
-        let row = match row {
-            Some(row) => row,
-            None => return Err(UserStoreError::UserNotFound),
-        };
-
-        let password_hash = row.get::<&str, _>("password_hash");
-
-        verify_password_hash(password_hash.to_string(), password.as_ref().to_string())
-            .await
-            .map_err(|_| UserStoreError::InvalidCredentials)?;
+        let row = sqlx::query(
+            r#"
+            SELECT email, password_hash, requires_2fa
+            FROM users
+            WHERE email = $1
+            "#,
+        )
+        .bind(email as &str)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| UserStoreError::UnexpectedError)?
+        .ok_or(UserStoreError::UserNotFound)?;
 
         let user = User {
-            email,
-            password,
+            email: Email::parse(row.get::<&str, _>("email").to_string())
+                .map_err(|_| UserStoreError::InvalidCredentials)?,
+            password: Password::parse(row.get::<&str, _>("password_hash").to_string())
+                .map_err(|_| UserStoreError::InvalidCredentials)?,
             requires_2fa: row.get::<bool, _>("requires_2fa"),
         };
+
+        verify_password_hash(user.password.as_ref().to_string(), password.to_string())
+            .await
+            .map_err(|_| UserStoreError::InvalidCredentials)?;
 
         Ok(user)
     }
