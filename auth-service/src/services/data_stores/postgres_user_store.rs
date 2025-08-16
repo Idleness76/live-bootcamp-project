@@ -56,10 +56,10 @@ impl UserStore for PostgresUserStore {
         let row = sqlx::query_as!(
             User,
             r#"
-        SELECT email as "email: _", password_hash as "password: _", requires_2fa
-        FROM users
-        WHERE email = $1
-        "#,
+            SELECT email as "email: _", password_hash as "password: _", requires_2fa
+            FROM users
+            WHERE email = $1
+            "#,
             email.as_ref()
         )
         .fetch_optional(&self.pool)
@@ -77,8 +77,8 @@ impl UserStore for PostgresUserStore {
         let row = sqlx::query_as!(
             UserPasswordRow,
             r#"
-        SELECT password_hash FROM users WHERE email = $1
-        "#,
+            SELECT password_hash FROM users WHERE email = $1
+            "#,
             email.as_ref()
         )
         .fetch_optional(&self.pool)
