@@ -53,6 +53,8 @@ jobs:
       working-directory: ./auth-service
       run: |
         export JWT_SECRET=secret
+        export POSTGRES_PASSWORD=secret
+        export DATABASE_URL=secret
         cargo build --verbose
         cargo test --verbose
 
@@ -111,6 +113,8 @@ jobs:
         script: |
           cd ~
           export JWT_SECRET=${{ secrets.JWT_SECRET }}
+          export POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          export DATABASE_URL=${{ secrets.DATABASE_URL }}
           export AUTH_SERVICE_IP=${{ vars.DROPLET_IP }}
           export LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}
           docker compose down
