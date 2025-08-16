@@ -21,6 +21,7 @@ dotenvy = { workspace = true }
 lazy_static = { workspace = true }
 rand = { workspace = true }
 sqlx = { workspace = true }
+argon2 = { workspace = true }
 
 [dev-dependencies]
 reqwest = { workspace = true }
