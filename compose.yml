@@ -44,7 +44,7 @@ services:
       DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@db:5432"
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
-      db
+      - db
   
   db:
     image: postgres:alpine

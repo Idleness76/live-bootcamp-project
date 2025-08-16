@@ -6,6 +6,7 @@ use axum::{
     serve::Serve,
     Router,
 };
+use sqlx::{postgres::PgPoolOptions, PgPool};
 
 use crate::utils::{env::ALLOWED_ORIGINS_ENV_VAR, DEFAULT_ALLOWED_ORIGINS};
 use std::{env, error::Error};
@@ -85,4 +86,9 @@ fn load_allowed_origins() -> Result<Option<Vec<HeaderValue>>, Box<dyn Error>> {
         .map(HeaderValue::from_str)
         .collect::<Result<Vec<_>, _>>()?;
     Ok(Some(parsed))
+}
+
+pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
+    // Create a new PostgreSQL connection pool
+    PgPoolOptions::new().max_connections(5).connect(url).await
 }
