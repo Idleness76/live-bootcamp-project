@@ -25,4 +25,5 @@ WORKDIR /app
 COPY --from=builder /app/target/release/auth-service /usr/local/bin
 # Fix the assets path - it should be relative to the workspace root
 COPY --from=builder /app/auth-service/assets /app/assets
+ENV REDIS_HOST_NAME=redis
 ENTRYPOINT ["/usr/local/bin/auth-service"]

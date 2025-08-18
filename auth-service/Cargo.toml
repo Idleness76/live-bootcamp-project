@@ -22,6 +22,7 @@ lazy_static = { workspace = true }
 rand = { workspace = true }
 sqlx = { workspace = true }
 argon2 = { workspace = true }
+redis = { workspace = true }
 
 [dev-dependencies]
 reqwest = { workspace = true }

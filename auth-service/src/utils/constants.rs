@@ -15,6 +15,7 @@ lazy_static! {
     pub static ref JWT_SECRET: String = set_token();
     pub static ref POSTGRES_PASSWORD: String = set_postgres_password();
     pub static ref DATABASE_URL: String = set_database_url();
+    pub static ref REDIS_HOST_NAME: String = set_redis_host();
 }
 
 fn set_token() -> String {
@@ -45,12 +46,19 @@ fn set_database_url() -> String {
     secret
 }
 
+fn set_redis_host() -> String {
+    dotenv().ok();
+    std_env::var(env::REDIS_HOST_NAME_ENV_VAR).unwrap_or(DEFAULT_REDIS_HOSTNAME.to_owned())
+}
+
 pub mod env {
     pub const JWT_SECRET_ENV_VAR: &str = "JWT_SECRET";
     pub const POSTGRES_PASSWORD_ENV_VAR: &str = "POSTGRES_PASSWORD";
     pub const DATABASE_URL_ENV_VAR: &str = "DATABASE_URL";
     pub const ALLOWED_ORIGINS_ENV_VAR: &str = "ALLOWED_ORIGINS";
+    pub const REDIS_HOST_NAME_ENV_VAR: &str = "REDIS_HOST_NAME";
 }
 
 pub const JWT_COOKIE_NAME: &str = "jwt";
 pub const DEFAULT_ALLOWED_ORIGINS: &str = "https://idlelgr.duckdns.org,http://localhost:8000";
+pub const DEFAULT_REDIS_HOSTNAME: &str = "127.0.0.1";
