@@ -3,7 +3,7 @@ use auth_service::{domain::ErrorResponse, utils::JWT_COOKIE_NAME};
 
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let input = [
         serde_json::json!({
@@ -45,11 +45,13 @@ async fn should_return_422_if_malformed_credentials() {
         let response = app.post_signup(&i).await;
         assert_eq!(response.status().as_u16(), 422, "Failed for input: {:?}", i);
     }
+
+    app.clean_up().await.unwrap();
 }
 
 #[tokio::test]
 async fn should_return_401_if_user_does_not_exist() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     // Valid format but nonexistent user
     let nonexistent_user_creds = serde_json::json!({
@@ -66,11 +68,13 @@ async fn should_return_401_if_user_does_not_exist() {
         .expect("Could not deserialize response body to ErrorResponse");
 
     assert_eq!(error_response.error, "Incorrect credentials");
+
+    app.clean_up().await.unwrap();
 }
 
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     // First create a user
     let signup_body = serde_json::json!({
@@ -90,11 +94,13 @@ async fn should_return_401_if_incorrect_credentials() {
     println!("Status: {}", status);
     println!("Body: {:?}", response.text().await);
     assert_eq!(status, 401);
+
+    app.clean_up().await.unwrap();
 }
 
 #[tokio::test]
 async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let random_email = get_random_email();
 
@@ -123,11 +129,13 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
         .expect("No auth cookie found");
 
     assert!(!auth_cookie.value().is_empty());
+
+    app.clean_up().await.unwrap();
 }
 
 #[tokio::test]
 async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let random_email = get_random_email();
 
     let signup_body = serde_json::json!({
@@ -152,4 +160,6 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
             .all(|cookie| cookie.name() != JWT_COOKIE_NAME),
         "Auth token should not be present in 2FA login response"
     );
+
+    app.clean_up().await.unwrap();
 }

@@ -1,6 +1,9 @@
 use reqwest::cookie::Jar;
-use sqlx::{postgres::PgPoolOptions, Executor, PgPool};
-use std::sync::Arc;
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    Connection, Executor, PgConnection, PgPool,
+};
+use std::{str::FromStr, sync::Arc};
 use tokio::sync::RwLock;
 
 use auth_service::{
@@ -18,16 +21,23 @@ use uuid::Uuid;
 /// This struct encapsulates a running server instance and an HTTP client for making requests.
 pub struct TestApp {
     pub address: String,
+    pub db_name: String,
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
     pub banned_token_store: Arc<RwLock<HashsetBannedTokenStore>>,
     pub two_fa_code_store: Arc<RwLock<HashmapTwoFACodeStore>>,
     pub email_client: Arc<MockEmailClient>,
+    pub clean_up_called: bool,
 }
 
 impl TestApp {
     pub async fn new() -> Self {
         let pg_pool = configure_postgresql().await;
+        let db_name = pg_pool
+            .connect_options()
+            .get_database()
+            .unwrap_or("")
+            .to_string();
 
         let user_store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
         let banned_token_store = Arc::new(RwLock::new(HashsetBannedTokenStore::default()));
@@ -60,12 +70,21 @@ impl TestApp {
 
         TestApp {
             address,
+            db_name,
             cookie_jar,
             http_client,
             banned_token_store,
             two_fa_code_store,
             email_client,
+            clean_up_called: false,
         }
+    }
+
+    /// Cleans up the test database after tests complete.
+    pub async fn clean_up(&mut self) -> Result<(), sqlx::Error> {
+        self.clean_up_called = true;
+        delete_database(&self.db_name).await?;
+        Ok(())
     }
 
     /// Makes a GET request to the root endpoint ("/")
@@ -139,6 +158,16 @@ impl TestApp {
     }
 }
 
+impl Drop for TestApp {
+    fn drop(&mut self) {
+        if !self.clean_up_called {
+            panic!(
+                "TestApp::clean_up was not called! Please call clean_up() at the end of your test."
+            );
+        }
+    }
+}
+
 pub fn get_random_email() -> String {
     format!("{}@example.com", Uuid::new_v4())
 }
@@ -185,4 +214,33 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
         .run(&connection)
         .await
         .expect("Failed to migrate the database");
+}
+
+async fn delete_database(db_name: &str) -> Result<(), sqlx::Error> {
+    let postgresql_conn_url = DATABASE_URL.to_owned();
+    let connection_options = PgConnectOptions::from_str(&postgresql_conn_url)?;
+    let mut connection = PgConnection::connect_with(&connection_options).await?;
+
+    // Terminate active connections
+    connection
+        .execute(
+            format!(
+                r#"
+                SELECT pg_terminate_backend(pg_stat_activity.pid)
+                FROM pg_stat_activity
+                WHERE pg_stat_activity.datname = '{}'
+                  AND pid <> pg_backend_pid();
+                "#,
+                db_name
+            )
+            .as_str(),
+        )
+        .await?;
+
+    // Drop the database
+    connection
+        .execute(format!(r#"DROP DATABASE "{}";"#, db_name).as_str())
+        .await?;
+
+    Ok(())
 }

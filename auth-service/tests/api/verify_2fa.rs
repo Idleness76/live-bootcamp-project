@@ -6,7 +6,7 @@ use auth_service::{
 
 #[tokio::test]
 async fn should_return_422_if_malformed_input() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let login_attempt_id = LoginAttemptId::default();
 
     let test_cases = [
@@ -41,11 +41,13 @@ async fn should_return_422_if_malformed_input() {
             case
         );
     }
+
+    app.clean_up().await.unwrap();
 }
 
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     // Simulate a valid login attempt (you may need to create one in your setup)
     let login_attempt_id = LoginAttemptId::default();
@@ -58,11 +60,13 @@ async fn should_return_401_if_incorrect_credentials() {
 
     let response = app.post_verify_2fa(&body).await;
     assert_eq!(response.status().as_u16(), 401);
+
+    app.clean_up().await.unwrap();
 }
 
 #[tokio::test]
 async fn should_return_401_if_user_does_not_exist() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     // Use a random login_attempt_id that doesn't exist
     let login_attempt_id = LoginAttemptId::default();
@@ -75,11 +79,13 @@ async fn should_return_401_if_user_does_not_exist() {
 
     let response = app.post_verify_2fa(&body).await;
     assert_eq!(response.status().as_u16(), 401);
+
+    app.clean_up().await.unwrap();
 }
 
 #[tokio::test]
 async fn should_return_200_if_correct_code() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let email = get_random_email();
     let parsed_email = auth_service::domain::Email::parse(email.clone()).expect("Invalid email");
     let login_attempt_id = LoginAttemptId::default();
@@ -115,11 +121,13 @@ async fn should_return_200_if_correct_code() {
         "Expected {} cookie in response",
         JWT_COOKIE_NAME
     );
+
+    app.clean_up().await.unwrap();
 }
 
 #[tokio::test]
 async fn should_return_401_if_same_code_twice() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let email = get_random_email();
     let parsed_email = auth_service::domain::Email::parse(email.clone()).expect("Invalid email");
     let login_attempt_id = LoginAttemptId::default();
@@ -149,4 +157,6 @@ async fn should_return_401_if_same_code_twice() {
     // Second attempt with the same code should fail
     let response = app.post_verify_2fa(&body).await;
     assert_eq!(response.status().as_u16(), 401);
+
+    app.clean_up().await.unwrap();
 }
