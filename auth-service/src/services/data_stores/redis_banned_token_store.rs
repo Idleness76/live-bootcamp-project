@@ -25,7 +25,8 @@ impl BannedTokenStore for RedisBannedTokenStore {
         let ttl =
             u64::try_from(TOKEN_TTL_SECONDS).map_err(|_| BannedTokenStoreError::UnexpectedError)?;
         let mut conn = self.conn.write().await;
-        conn.set_ex(key, true, ttl)
+        let _: redis::Value = conn
+            .set_ex(key, true, ttl)
             .map_err(|_e: redis::RedisError| BannedTokenStoreError::UnexpectedError)?;
         Ok(())
     }

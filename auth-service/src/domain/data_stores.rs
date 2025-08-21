@@ -66,6 +66,14 @@ pub enum TwoFACodeStoreError {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct LoginAttemptId(String);
 
+impl LoginAttemptId {
+    pub fn parse(s: &str) -> Result<Self, String> {
+        uuid::Uuid::parse_str(s)
+            .map(|_| Self(s.to_string()))
+            .map_err(|_| "Invalid UUID format".to_string())
+    }
+}
+
 impl Default for LoginAttemptId {
     fn default() -> Self {
         Self(uuid::Uuid::new_v4().to_string())
