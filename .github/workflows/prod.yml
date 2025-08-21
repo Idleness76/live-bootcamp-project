@@ -9,6 +9,9 @@ on:
         required: false
         default: 'Manual deployment'
 
+env:
+  SQLX_OFFLINE: true
+
 jobs:
   confirm:
     runs-on: ubuntu-latest
