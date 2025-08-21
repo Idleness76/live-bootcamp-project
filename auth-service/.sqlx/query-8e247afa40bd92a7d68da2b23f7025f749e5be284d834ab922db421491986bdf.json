@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT email as \"email: _\", password_hash as \"password: _\", requires_2fa\n            FROM users\n            WHERE email = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "email: _",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "password: _",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "requires_2fa",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8e247afa40bd92a7d68da2b23f7025f749e5be284d834ab922db421491986bdf"
+}

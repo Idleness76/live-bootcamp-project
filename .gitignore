@@ -34,8 +34,6 @@ tarpaulin-report.html
 cobertura.xml
 lcov.info
 
-# sqlx macro stuff
-.sqlx/
 
 # Personal/local files
 copilot-instructions.md
