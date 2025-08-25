@@ -2,7 +2,7 @@ use auth_service::{
     app_state::AppState,
     get_postgres_pool, get_redis_client,
     services::{MockEmailClient, PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore},
-    utils::{prod, DATABASE_URL, REDIS_HOST_NAME},
+    utils::{init_tracing, prod, DATABASE_URL, REDIS_HOST_NAME},
     Application,
 };
 use sqlx::PgPool;
@@ -11,6 +11,8 @@ use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
+    init_tracing();
+
     let pg_pool = configure_postgresql().await;
     let redis_client =
         get_redis_client(REDIS_HOST_NAME.to_string()).expect("Failed to get Redis client");

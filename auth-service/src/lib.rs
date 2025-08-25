@@ -63,6 +63,7 @@ impl Application {
     }
 
     pub async fn run(self) -> Result<(), std::io::Error> {
+        tracing::info!("listening on {}", &self.address);
         self.server.await
     }
 }
