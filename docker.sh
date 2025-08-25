@@ -25,9 +25,6 @@ done < <(grep -v '^#' "$ENV_FILE")
 export AUTH_SERVICE_IP=""  # Empty for local - not needed
 export NGINX_CONFIG="nginx-local.conf"
 
-# Use all available CPU cores for Rust builds
-export CARGO_BUILD_JOBS=$(nproc)
-
 # Run with local override
 docker compose -f compose.yml -f compose-local.yml build --parallel
 docker compose -f compose.yml -f compose-local.yml up

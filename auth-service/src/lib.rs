@@ -9,11 +9,15 @@ use axum::{
 use redis::{Client, RedisResult};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 
-use crate::utils::{env::ALLOWED_ORIGINS_ENV_VAR, DEFAULT_ALLOWED_ORIGINS};
+use crate::utils::{
+    env::ALLOWED_ORIGINS_ENV_VAR, make_span_with_request_id, on_request, on_response,
+    DEFAULT_ALLOWED_ORIGINS,
+};
 use std::{env, error::Error};
 use tower_http::{
     cors::{Any, CorsLayer},
     services::ServeDir,
+    trace::TraceLayer,
 };
 
 pub mod app_state;
@@ -57,7 +61,17 @@ impl Application {
                 .route("/verify-token", post(routes::verify_token))
                 .nest_service("/assets", ServeDir::new("assets"))
                 .with_state(app_state)
-                .layer(cors),
+                .layer(cors)
+                .layer(
+                    // New!
+                    // Add a TraceLayer for HTTP requests to enable detailed tracing
+                    // This layer will create spans for each request using the make_span_with_request_id function,
+                    // and log events at the start and end of each request using on_request and on_response functions.
+                    TraceLayer::new_for_http()
+                        .make_span_with(make_span_with_request_id)
+                        .on_request(on_request)
+                        .on_response(on_response),
+                ),
         );
         Ok(Application { server, address })
     }
