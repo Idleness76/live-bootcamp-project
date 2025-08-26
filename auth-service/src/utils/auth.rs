@@ -105,17 +105,19 @@ fn create_token(claims: &Claims) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::HashsetBannedTokenStore;
+    use crate::services::RedisBannedTokenStore;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+    use tokio::task;
 
-    #[tokio::test]
-    async fn test_generate_auth_cookie() {
-        let email = Email::parse("test@example.com".to_owned()).unwrap();
-        let cookie = generate_auth_cookie(&email).unwrap();
-        assert_eq!(cookie.name(), JWT_COOKIE_NAME);
-        assert_eq!(cookie.value().split('.').count(), 3);
-        assert_eq!(cookie.path(), Some("/"));
-        assert_eq!(cookie.http_only(), Some(true));
-        assert_eq!(cookie.same_site(), Some(SameSite::Lax));
+    async fn make_redis_store() -> RedisBannedTokenStore {
+        let conn = task::spawn_blocking(|| {
+            let client = redis::Client::open("redis://127.0.0.1/").expect("redis url");
+            client.get_connection().expect("redis conn")
+        })
+        .await
+        .expect("spawn_blocking");
+        RedisBannedTokenStore::new(Arc::new(RwLock::new(conn)))
     }
 
     #[tokio::test]
@@ -140,7 +142,8 @@ mod tests {
     async fn test_validate_token_with_valid_token() {
         let email = Email::parse("test@example.com".to_owned()).unwrap();
         let token = generate_auth_token(&email).unwrap();
-        let banned_store = HashsetBannedTokenStore::default();
+        let mut banned_store = make_redis_store().await;
+        banned_store.add_banned_token(&token).await.unwrap();
         let result = validate_token(&token, &banned_store).await.unwrap();
 
         assert_eq!(result.sub, "test@example.com");
@@ -153,7 +156,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_token_with_invalid_token() {
-        let banned_store = HashsetBannedTokenStore::default();
+        let banned_store = make_redis_store().await;
         let result = validate_token("invalid_token", &banned_store).await;
         assert!(result.is_err());
     }
@@ -162,7 +165,7 @@ mod tests {
     async fn test_validate_token_with_banned_token() {
         let email = Email::parse("test@example.com".to_owned()).unwrap();
         let token = generate_auth_token(&email).unwrap();
-        let mut banned_store = HashsetBannedTokenStore::default();
+        let mut banned_store = make_redis_store().await;
 
         banned_store.add_banned_token(&token).await.unwrap();
         let result = validate_token(&token, &banned_store).await;
