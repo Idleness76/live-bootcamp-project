@@ -55,7 +55,7 @@ impl Application {
             Router::new()
                 .route("/", get(serve_index))
                 .route("/signup", post(routes::signup))
-                //.route("/login", post(routes::login))
+                .route("/login", post(routes::login))
                 //.route("/verify-2fa", post(routes::verify_2fa))
                 //.route("/logout", post(routes::logout))
                 .route("/verify-token", post(routes::verify_token))

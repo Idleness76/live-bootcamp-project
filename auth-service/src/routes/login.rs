@@ -65,19 +65,19 @@ async fn handle_2fa(
         .await
         .add_code(email.clone(), login_attempt_id.clone(), two_fa_code.clone())
         .await;
-    if let Err(_) = add_result {
-        return (jar, Err(AuthAPIError::UnexpectedError));
+    if let Err(e) = add_result {
+        return (jar, Err(AuthAPIError::UnexpectedError(e.into())));
     }
 
     // Send the 2FA code via email
     let subject = "Your 2FA Code";
     let content = format!("Your 2FA code is: {}", two_fa_code.as_ref());
-    if let Err(_) = state
+    if let Err(e) = state
         .email_client
         .send_email(email, subject, &content)
         .await
     {
-        return (jar, Err(AuthAPIError::UnexpectedError));
+        return (jar, Err(AuthAPIError::UnexpectedError(e)));
     }
 
     let response = Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
@@ -97,7 +97,7 @@ async fn handle_no_2fa(
 ) {
     let auth_cookie = match generate_auth_cookie(email) {
         Ok(cookie) => cookie,
-        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+        Err(e) => return (jar, Err(AuthAPIError::UnexpectedError(e))),
     };
     let updated_jar = jar.add(auth_cookie);
     (

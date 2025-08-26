@@ -1,3 +1,4 @@
+use color_eyre::eyre::{eyre, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgValueRef, Decode, Postgres, Type};
 use validator::validate_email;
@@ -12,11 +13,11 @@ impl AsRef<str> for Email {
 }
 
 impl Email {
-    pub fn parse(s: String) -> Result<Email, String> {
+    pub fn parse(s: String) -> Result<Email> {
         if validate_email(&s) {
             Ok(Self(s))
         } else {
-            Err(format!("{} is not a valid email.", s))
+            Err(eyre!("{} is not a valid email.", s))
         }
     }
 }

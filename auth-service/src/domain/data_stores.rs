@@ -1,5 +1,5 @@
 use crate::domain::{Email, Password, User};
-use color_eyre::eyre::Report;
+use color_eyre::eyre::{eyre, Context, Report, Result};
 use rand::Rng;
 use serde::Serialize;
 use thiserror::Error;
@@ -52,9 +52,10 @@ pub trait BannedTokenStore: Send + Sync {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum BannedTokenStoreError {
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
 }
 
 // NOTE: We are using the "parse don't validate" principle.
@@ -75,20 +76,31 @@ pub trait TwoFACodeStore {
     ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum TwoFACodeStoreError {
+    #[error("Login Attempt ID not found")]
     LoginAttemptIdNotFound,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+}
+
+impl PartialEq for TwoFACodeStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::LoginAttemptIdNotFound, Self::LoginAttemptIdNotFound)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct LoginAttemptId(String);
 
 impl LoginAttemptId {
-    pub fn parse(s: &str) -> Result<Self, String> {
-        uuid::Uuid::parse_str(s)
-            .map(|_| Self(s.to_string()))
-            .map_err(|_| "Invalid UUID format".to_string())
+    pub fn parse(s: &str) -> Result<Self> {
+        let parsed_id = uuid::Uuid::parse_str(s).wrap_err("Invalid login attempt id")?; // Updated!
+        Ok(Self(parsed_id.to_string()))
     }
 }
 
@@ -108,11 +120,11 @@ impl AsRef<str> for LoginAttemptId {
 pub struct TwoFACode(String);
 
 impl TwoFACode {
-    pub fn parse(code: &str) -> Result<Self, String> {
+    pub fn parse(code: &str) -> Result<Self> {
         if code.len() == 6 && code.chars().all(|c| c.is_digit(10)) {
             Ok(Self(code.to_string()))
         } else {
-            Err("Invalid 2FA code format".to_string())
+            Err(eyre!("Invalid 2FA code format"))
         }
     }
 }

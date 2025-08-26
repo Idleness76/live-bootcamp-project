@@ -1,3 +1,4 @@
+use color_eyre::eyre::{eyre, Result};
 use sqlx::{postgres::PgValueRef, Decode, Postgres, Type};
 
 #[derive(Debug, serde::Deserialize, Clone, PartialEq)]
@@ -10,29 +11,31 @@ impl AsRef<str> for Password {
 }
 
 impl Password {
-    pub fn parse(s: String) -> Result<Password, String> {
+    pub fn parse(s: String) -> Result<Password> {
         if s.is_empty() {
-            return Err("Password cannot be empty".to_string());
+            return Err(eyre!("Password cannot be empty"));
         }
 
         if s.len() < 8 {
-            return Err("Password must be at least 8 characters long".to_string());
+            return Err(eyre!("Password must be at least 8 characters long"));
         }
 
         if !s.chars().any(|c| c.is_uppercase()) {
-            return Err("Password must contain at least one uppercase letter".to_string());
+            return Err(eyre!("Password must contain at least one uppercase letter"));
         }
 
         if !s.chars().any(|c| c.is_lowercase()) {
-            return Err("Password must contain at least one lowercase letter".to_string());
+            return Err(eyre!("Password must contain at least one lowercase letter"));
         }
 
         if !s.chars().any(|c| c.is_ascii_digit()) {
-            return Err("Password must contain at least one digit".to_string());
+            return Err(eyre!("Password must contain at least one digit"));
         }
 
         if !s.chars().any(|c| "!@#$%^&*()_+-=[]{}|;:,.<>?".contains(c)) {
-            return Err("Password must contain at least one special character".to_string());
+            return Err(eyre!(
+                "Password must contain at least one special character"
+            ));
         }
 
         Ok(Password(s.to_string()))
