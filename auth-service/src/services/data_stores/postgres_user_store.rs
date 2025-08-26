@@ -1,13 +1,10 @@
-use std::error::Error;
-
+use crate::domain::{Email, Password, User, UserStore, UserStoreError};
 use argon2::{
     password_hash::SaltString, Algorithm, Argon2, Params, PasswordHash, PasswordHasher,
     PasswordVerifier, Version,
 };
-
+use color_eyre::eyre::{eyre, Context, Result};
 use sqlx::{PgPool, Row};
-
-use crate::domain::{Email, Password, User, UserStore, UserStoreError};
 
 pub struct PostgresUserStore {
     pool: PgPool,
@@ -30,7 +27,7 @@ impl UserStore for PostgresUserStore {
     async fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
         let password_hash = compute_password_hash(user.password.as_ref().to_string())
             .await
-            .map_err(|_| UserStoreError::UnexpectedError)?;
+            .map_err(UserStoreError::UnexpectedError)?;
 
         let result = sqlx::query!(
             r#"
@@ -44,7 +41,7 @@ impl UserStore for PostgresUserStore {
         )
         .execute(&self.pool)
         .await
-        .map_err(|_| UserStoreError::UnexpectedError)?;
+        .map_err(|e| UserStoreError::UnexpectedError(eyre!(e)))?;
 
         if result.rows_affected() == 0 {
             return Err(UserStoreError::UserAlreadyExists);
@@ -66,7 +63,7 @@ impl UserStore for PostgresUserStore {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(|_| UserStoreError::UnexpectedError)?;
+        .map_err(|e| UserStoreError::UnexpectedError(eyre!(e)))?;
 
         row.ok_or(UserStoreError::UserNotFound)
     }
@@ -86,7 +83,7 @@ impl UserStore for PostgresUserStore {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(|_| UserStoreError::UnexpectedError)?;
+        .map_err(|e| UserStoreError::UnexpectedError(eyre!(e)))?;
 
         let password_hash = match row {
             Some(row) => row.password_hash,
@@ -110,7 +107,7 @@ impl UserStore for PostgresUserStore {
         .bind(email as &str)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|_| UserStoreError::UnexpectedError)?
+        .map_err(|e| UserStoreError::UnexpectedError(eyre!(e)))?
         .ok_or(UserStoreError::UserNotFound)?;
 
         let user = User {
@@ -133,32 +130,34 @@ impl UserStore for PostgresUserStore {
 async fn verify_password_hash(
     expected_password_hash: String,
     password_candidate: String,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+) -> Result<()> {
     let current_span: tracing::Span = tracing::Span::current();
+
     tokio::task::spawn_blocking(move || {
         current_span.in_scope(|| {
             let parsed_hash = PasswordHash::new(&expected_password_hash)?;
             Argon2::default()
                 .verify_password(password_candidate.as_bytes(), &parsed_hash)
-                .map_err(|e| e.into())
+                .wrap_err("failed to verify password hash")
         })
     })
     .await?
 }
 
 #[tracing::instrument(name = "Computing password hash", skip_all)]
-async fn compute_password_hash(password: String) -> Result<String, Box<dyn Error + Send + Sync>> {
+async fn compute_password_hash(password: String) -> Result<String> {
     let current_span: tracing::Span = tracing::Span::current();
-    let password_hash = tokio::task::spawn_blocking(move || {
+
+    let password_hash = tokio::task::spawn_blocking(move || -> Result<String> {
         current_span.in_scope(|| {
             let salt = SaltString::generate(&mut rand::thread_rng());
-            Argon2::new(
-                Algorithm::Argon2id,
-                Version::V0x13,
-                Params::new(15000, 2, 1, None)?,
-            )
-            .hash_password(password.as_bytes(), &salt)
-            .map(|hash| hash.to_string())
+            let params = Params::new(15000, 2, 1, None)
+                .map_err(|e| eyre!("invalid argon2 params: {}", e))?;
+            let argon = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+            let ph = argon
+                .hash_password(password.as_bytes(), &salt)
+                .map_err(|e| eyre!("failed to hash password: {}", e))?;
+            Ok(ph.to_string())
         })
     })
     .await??;

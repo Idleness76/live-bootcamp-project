@@ -36,7 +36,7 @@ pub async fn signup(
         .await
         .map_err(|e| match e {
             UserStoreError::UserAlreadyExists => AuthAPIError::UserAlreadyExists,
-            _ => AuthAPIError::UnexpectedError,
+            _ => AuthAPIError::UnexpectedError(e.into()),
         })?;
     Ok((
         StatusCode::CREATED,
