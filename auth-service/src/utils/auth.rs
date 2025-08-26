@@ -113,13 +113,25 @@ mod tests {
     use super::*;
     use crate::services::RedisBannedTokenStore;
     use std::sync::Arc;
-    use tokio::sync::RwLock;
-    use tokio::task;
+    use tokio::{sync::RwLock, task};
 
+    // Create a fresh Redis store per test by flushing the DB on creation to avoid test interference.
     async fn make_redis_store() -> RedisBannedTokenStore {
         let conn = task::spawn_blocking(|| {
-            let client = redis::Client::open("redis://127.0.0.1/").expect("redis url");
-            client.get_connection().expect("redis conn")
+            // Use a non-zero DB index derived from the process id to isolate test data
+            // from any other Redis clients that might be using the default DB 0.
+            let db_index = (std::process::id() % 15) + 1; // pick DB 1..15
+            let redis_url = format!("redis://127.0.0.1/{}", db_index);
+            let client = redis::Client::open(redis_url.as_str()).expect("redis url");
+            let mut conn = client.get_connection().expect("redis conn");
+            let _: () = redis::cmd("FLUSHDB").query(&mut conn).expect("flushdb");
+            // Sanity check: ensure there are no banned_token keys left after FLUSHDB.
+            let keys: Vec<String> = redis::cmd("KEYS")
+                .arg("banned_token:*")
+                .query(&mut conn)
+                .expect("failed to fetch keys");
+            assert!(keys.is_empty(), "redis not empty after FLUSHDB: {:?}", keys);
+            conn
         })
         .await
         .expect("spawn_blocking");
@@ -138,6 +150,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_generate_auth_cookie_returns_jwt() {
+        let email = Email::parse("test@example.com".to_owned()).unwrap();
+        let cookie = generate_auth_cookie(&email).unwrap();
+        let value = cookie.value();
+        assert_eq!(value.split('.').count(), 3);
+    }
+
+    #[tokio::test]
     async fn test_generate_auth_token() {
         let email = Email::parse("test@example.com".to_owned()).unwrap();
         let result = generate_auth_token(&email).unwrap();
@@ -145,16 +165,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_decode_claims_with_valid_token() {
+        let email = Email::parse("test@example.com".to_owned()).unwrap();
+        let token = generate_auth_token(&email).unwrap();
+        let claims = decode_claims(&token).expect("should decode claims");
+        assert_eq!(claims.sub, "test@example.com");
+        assert!(claims.exp > Utc::now().timestamp() as usize);
+    }
+
+    #[tokio::test]
     async fn test_validate_token_with_valid_token() {
         let email = Email::parse("test@example.com".to_owned()).unwrap();
         let token = generate_auth_token(&email).unwrap();
-        let mut banned_store = make_redis_store().await;
-        banned_store.add_banned_token(&token).await.unwrap();
-        let result = validate_token(&token, &banned_store).await.unwrap();
+        let banned_store = make_redis_store().await;
+
+        let res = validate_token(&token, &banned_store).await;
+        assert!(
+            res.is_ok(),
+            "expected token to validate, got: {:?}",
+            res.err()
+        );
+        let result = res.unwrap();
 
         assert_eq!(result.sub, "test@example.com");
         let exp = Utc::now()
-            .checked_add_signed(chrono::Duration::try_minutes(9).expect("valid duration"))
+            .checked_add_signed(chrono::Duration::minutes(9))
             .expect("valid timestamp")
             .timestamp();
         assert!(result.exp > exp as usize);
@@ -176,5 +211,25 @@ mod tests {
         banned_store.add_banned_token(&token).await.unwrap();
         let result = validate_token(&token, &banned_store).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_banned_token_isolation() {
+        let email1 = Email::parse("one@example.com".to_owned()).unwrap();
+        let email2 = Email::parse("two@example.com".to_owned()).unwrap();
+        let token1 = generate_auth_token(&email1).unwrap();
+        let token2 = generate_auth_token(&email2).unwrap();
+        let mut banned_store = make_redis_store().await;
+
+        // Ban token1 only
+        banned_store.add_banned_token(&token1).await.unwrap();
+
+        // token1 should be rejected
+        let res1 = validate_token(&token1, &banned_store).await;
+        assert!(res1.is_err(), "banned token should not validate");
+
+        // token2 should still be valid
+        let res2 = validate_token(&token2, &banned_store).await;
+        assert!(res2.is_ok(), "non-banned token should validate");
     }
 }
