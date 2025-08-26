@@ -6,6 +6,7 @@ use crate::{
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::CookieJar;
 
+#[tracing::instrument(name = "Logout", skip_all)]
 pub async fn logout(
     State(app_state): State<AppState>,
     jar: CookieJar,
@@ -22,7 +23,7 @@ pub async fn logout(
         store
             .ban_if_not_present(token)
             .await
-            .map_err(|_| AuthAPIError::UnexpectedError)?
+            .map_err(|e| AuthAPIError::UnexpectedError(e.into()))?
     };
 
     if !newly_banned {

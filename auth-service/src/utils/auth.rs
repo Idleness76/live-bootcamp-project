@@ -22,12 +22,14 @@ pub enum GenerateTokenError {
 }
 
 // Create cookie with a new JWT auth token
+#[tracing::instrument(name = "Generate Auth Cookie", skip_all)]
 pub fn generate_auth_cookie(email: &Email) -> Result<Cookie<'static>> {
     let token = generate_auth_token(email)?;
     Ok(create_auth_cookie(token))
 }
 
 // Create cookie and set the value to the passed-in token string
+#[tracing::instrument(name = "Create Auth Cookie", skip_all)]
 fn create_auth_cookie(token: String) -> Cookie<'static> {
     let cookie = Cookie::build((JWT_COOKIE_NAME, token))
         .path("/") // apple cookie to all URLs on the server
@@ -39,6 +41,7 @@ fn create_auth_cookie(token: String) -> Cookie<'static> {
 }
 
 // Create JWT auth token
+#[tracing::instrument(name = "Generate Auth Token", skip_all)]
 fn generate_auth_token(email: &Email) -> Result<String> {
     let delta = chrono::Duration::try_seconds(TOKEN_TTL_SECONDS)
         .wrap_err("failed to create 10 minute time delta")?;
@@ -63,6 +66,7 @@ fn generate_auth_token(email: &Email) -> Result<String> {
 }
 
 /// Check if JWT auth token is valid by decoding it using the JWT secret
+#[tracing::instrument(name = "Validate Token", skip_all)]
 pub async fn validate_token(token: &str, banned_store: &dyn BannedTokenStore) -> Result<Claims> {
     match banned_store.is_token_banned(token).await {
         Ok(value) => {
@@ -83,6 +87,7 @@ pub async fn validate_token(token: &str, banned_store: &dyn BannedTokenStore) ->
 }
 
 /// Decode JWT and return claims without consulting banned store.
+#[tracing::instrument(name = "Decode Claims", skip_all)]
 pub fn decode_claims(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
     Ok(decode::<Claims>(
         token,
@@ -93,6 +98,7 @@ pub fn decode_claims(token: &str) -> Result<Claims, jsonwebtoken::errors::Error>
 }
 
 // Create JWT auth token by encoding claims using the JWT secret
+#[tracing::instrument(name = "Create Token", skip_all)]
 fn create_token(claims: &Claims) -> Result<String> {
     encode(
         &jsonwebtoken::Header::default(),

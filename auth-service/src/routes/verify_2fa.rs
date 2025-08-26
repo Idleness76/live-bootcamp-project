@@ -6,6 +6,7 @@ use axum::{http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 use serde::Deserialize;
 
+#[tracing::instrument(name = "Verify 2FA", skip_all)]
 pub async fn verify_2fa(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -33,9 +34,10 @@ pub async fn verify_2fa(
         .await
         .remove_code(&email)
         .await
-        .map_err(|_| AuthAPIError::UnexpectedError)?;
+        .map_err(|e| AuthAPIError::UnexpectedError(e.into()))?;
 
-    let auth_cookie = generate_auth_cookie(&email).map_err(|_| AuthAPIError::UnexpectedError)?;
+    let auth_cookie =
+        generate_auth_cookie(&email).map_err(|e| AuthAPIError::UnexpectedError(e.into()))?;
 
     let updated_jar = jar.add(auth_cookie);
 
