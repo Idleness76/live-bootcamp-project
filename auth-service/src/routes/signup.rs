@@ -20,7 +20,7 @@ pub struct SignupResponse {
 }
 
 //#[axum::debug_handler]
-#[tracing::instrument(name = "Signup", skip_all, err(Debug))]
+#[tracing::instrument(name = "Signup", skip_all)]
 pub async fn signup(
     State(state): State<AppState>,
     Json(request): Json<SignupRequest>,
