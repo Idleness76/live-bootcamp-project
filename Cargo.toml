@@ -40,3 +40,4 @@ tracing-subscriber = { version = "0.3.18", features = [
 tracing-error = "0.2.0"
 thiserror = "1.0.58"
 color-eyre = "0.6.3"
+secrecy = { version = "0.8.0", features = ["serde"] }
