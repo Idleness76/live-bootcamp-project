@@ -78,6 +78,7 @@ jobs:
         export JWT_SECRET=secret
         export POSTGRES_PASSWORD=secret
         export DATABASE_URL=secret
+        export POSTMARK_AUTH_TOKEN=secret
         cargo build --verbose
       #cargo test --verbose
 
@@ -140,6 +141,7 @@ jobs:
           export DATABASE_URL=${{ secrets.DATABASE_URL }}
           export AUTH_SERVICE_IP=${{ vars.DROPLET_IP }}
           export LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}
+          export POSTMARK_AUTH_TOKEN=${{ secrets.POSTMARK_AUTH_TOKEN }} 
           docker compose down
           docker compose pull
           docker compose up -d
