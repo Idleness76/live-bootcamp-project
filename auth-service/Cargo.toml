@@ -29,10 +29,11 @@ tracing-error = { workspace = true }
 thiserror = { workspace = true }
 color-eyre = { workspace = true }
 secrecy = { workspace = true }
+reqwest = { workspace = true }
 
 [dev-dependencies]
-reqwest = { workspace = true }
 fake = { workspace = true }
 rand = { workspace = true }
 quickcheck = { workspace = true }
 quickcheck_macros = { workspace = true }
+wiremock = { workspace = true }
