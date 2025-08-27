@@ -1,23 +1,31 @@
 use color_eyre::eyre::{eyre, Result};
-use serde::{Deserialize, Serialize};
+use secrecy::{ExposeSecret, Secret};
 use sqlx::{postgres::PgValueRef, Decode, Postgres, Type};
 use validator::validate_email;
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
-pub struct Email(String);
+#[derive(Debug, Clone)]
+pub struct Email(Secret<String>);
 
-impl AsRef<str> for Email {
-    fn as_ref(&self) -> &str {
+impl AsRef<Secret<String>> for Email {
+    fn as_ref(&self) -> &Secret<String> {
         &self.0
     }
 }
 
+impl PartialEq for Email {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.expose_secret() == other.0.expose_secret()
+    }
+}
+
+impl Eq for Email {}
+
 impl Email {
-    pub fn parse(s: String) -> Result<Email> {
-        if validate_email(&s) {
+    pub fn parse(s: Secret<String>) -> Result<Email> {
+        if validate_email(s.expose_secret()) {
             Ok(Self(s))
         } else {
-            Err(eyre!("{} is not a valid email.", s))
+            Err(eyre!("{} is not a valid email.", s.expose_secret()))
         }
     }
 }
@@ -26,7 +34,7 @@ impl Email {
 impl<'r> Decode<'r, Postgres> for Email {
     fn decode(value: PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
         let s = <String as Decode<Postgres>>::decode(value)?;
-        Email::parse(s).map_err(|e| e.into())
+        Email::parse(Secret::new(s)).map_err(|e| e.into())
     }
 }
 
@@ -46,8 +54,10 @@ mod tests {
 
     #[quickcheck]
     fn test_valid_emails_are_idempotent(email: String) -> bool {
-        match Email::parse(email.clone()) {
-            Ok(parsed) => Email::parse(parsed.as_ref().to_string()).is_ok(),
+        match Email::parse(Secret::new(email.clone())) {
+            Ok(parsed) => {
+                Email::parse(Secret::new(parsed.as_ref().expose_secret().to_string())).is_ok()
+            }
             Err(_) => true,
         }
     }
@@ -58,13 +68,13 @@ mod tests {
         if s.is_empty() {
             return true;
         }
-        Email::parse(s).is_err()
+        Email::parse(Secret::new(s)).is_err()
     }
 
     #[quickcheck]
     fn test_email_with_multiple_at_is_invalid(s: String) -> bool {
         if s.matches('@').count() > 1 {
-            Email::parse(s).is_err()
+            Email::parse(Secret::new(s)).is_err()
         } else {
             true
         }
@@ -76,7 +86,7 @@ mod tests {
 
         test_cases
             .into_iter()
-            .all(|email| Email::parse(email).is_err())
+            .all(|email| Email::parse(Secret::new(email)).is_err())
     }
 
     #[test]
@@ -84,7 +94,7 @@ mod tests {
         for _ in 0..100 {
             let email: String = SafeEmail().fake();
             assert!(
-                Email::parse(email.clone()).is_ok(),
+                Email::parse(Secret::new(email.clone())).is_ok(),
                 "Generated safe email should be valid: {}",
                 email
             );
@@ -95,7 +105,7 @@ mod tests {
     fn test_random_strings_mostly_invalid() {
         let valid_count = (0..1000)
             .map(|_| Word().fake::<String>())
-            .filter(|s| Email::parse(s.clone()).is_ok())
+            .filter(|s| Email::parse(Secret::new(s.clone())).is_ok())
             .count();
 
         assert!(
@@ -116,7 +126,7 @@ mod tests {
 
         for email in valid_emails {
             assert!(
-                Email::parse(email.to_string()).is_ok(),
+                Email::parse(Secret::new(email.to_string())).is_ok(),
                 "Expected {} to be valid",
                 email
             );
@@ -125,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_email_access() {
-        let email = Email::parse("test@example.com".to_string()).unwrap();
-        assert_eq!(email.as_ref(), "test@example.com");
+        let email = Email::parse(Secret::new("test@example.com".to_string())).unwrap();
+        assert_eq!(email.as_ref().expose_secret().as_str(), "test@example.com");
     }
 }

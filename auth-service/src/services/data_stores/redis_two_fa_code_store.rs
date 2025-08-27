@@ -1,5 +1,6 @@
 use color_eyre::eyre::Context;
 use redis::{Commands, Connection};
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -66,7 +67,10 @@ impl TwoFACodeStore for RedisTwoFACodeStore {
             Ok(())
         } else {
             Err(TwoFACodeStoreError::UnexpectedError(
-                color_eyre::eyre::eyre!("Nothing found, nothing deleted for {}", email.as_ref()),
+                color_eyre::eyre::eyre!(
+                    "Nothing found, nothing deleted for {}",
+                    email.as_ref().expose_secret()
+                ),
             ))
         }
     }
@@ -111,5 +115,5 @@ const TEN_MINUTES_IN_SECONDS: u64 = 600;
 const TWO_FA_CODE_PREFIX: &str = "two_fa_code:";
 
 fn get_key(email: &Email) -> String {
-    format!("{}{}", TWO_FA_CODE_PREFIX, email.as_ref())
+    format!("{}{}", TWO_FA_CODE_PREFIX, email.as_ref().expose_secret())
 }

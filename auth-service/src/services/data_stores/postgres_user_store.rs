@@ -37,7 +37,7 @@ impl UserStore for PostgresUserStore {
             VALUES ($1, $2, $3)
             ON CONFLICT (email) DO NOTHING
             "#,
-            user.email.as_ref(),
+            user.email.as_ref().expose_secret(),
             password_hash,
             user.requires_2fa
         )
@@ -61,7 +61,7 @@ impl UserStore for PostgresUserStore {
             FROM users
             WHERE email = $1
             "#,
-            email.as_ref()
+            email.as_ref().expose_secret()
         )
         .fetch_optional(&self.pool)
         .await
@@ -81,7 +81,7 @@ impl UserStore for PostgresUserStore {
             r#"
             SELECT password_hash FROM users WHERE email = $1
             "#,
-            email.as_ref()
+            email.as_ref().expose_secret()
         )
         .fetch_optional(&self.pool)
         .await
@@ -119,7 +119,7 @@ impl UserStore for PostgresUserStore {
         .ok_or(UserStoreError::UserNotFound)?;
 
         let user = User {
-            email: Email::parse(row.get::<&str, _>("email").to_string())
+            email: Email::parse(Secret::new(row.get::<&str, _>("email").to_string()))
                 .map_err(|_| UserStoreError::InvalidCredentials)?,
             // Keep the DB password hash wrapped as a Secret when parsing into `Password`.
             password: Password::parse(Secret::new(row.get::<&str, _>("password_hash").to_string()))

@@ -3,6 +3,7 @@ use auth_service::{
     domain::{LoginAttemptId, TwoFACode, TwoFACodeStore},
     utils::JWT_COOKIE_NAME,
 };
+use secrecy::{ExposeSecret, Secret};
 
 #[tokio::test]
 async fn should_return_422_if_malformed_input() {
@@ -87,7 +88,8 @@ async fn should_return_401_if_user_does_not_exist() {
 async fn should_return_200_if_correct_code() {
     let mut app = TestApp::new().await;
     let email = get_random_email();
-    let parsed_email = auth_service::domain::Email::parse(email.clone()).expect("Invalid email");
+    let parsed_email =
+        auth_service::domain::Email::parse(Secret::new(email.clone())).expect("Invalid email");
     let login_attempt_id = LoginAttemptId::default();
     let two_fa_code = TwoFACode::default();
 
@@ -103,7 +105,7 @@ async fn should_return_200_if_correct_code() {
         .expect("Failed to store two_fa_code");
 
     let body = serde_json::json!({
-        "email": parsed_email.as_ref(),
+    "email": parsed_email.as_ref().expose_secret(),
         "loginAttemptId": login_attempt_id.as_ref(),
         "2FACode": two_fa_code.as_ref()
     });
@@ -129,7 +131,8 @@ async fn should_return_200_if_correct_code() {
 async fn should_return_401_if_same_code_twice() {
     let mut app = TestApp::new().await;
     let email = get_random_email();
-    let parsed_email = auth_service::domain::Email::parse(email.clone()).expect("Invalid email");
+    let parsed_email =
+        auth_service::domain::Email::parse(Secret::new(email.clone())).expect("Invalid email");
     let login_attempt_id = LoginAttemptId::default();
     let two_fa_code = TwoFACode::default();
 
@@ -145,7 +148,7 @@ async fn should_return_401_if_same_code_twice() {
         .expect("Failed to store two_fa_code");
 
     let body = serde_json::json!({
-        "email": parsed_email.as_ref(),
+    "email": parsed_email.as_ref().expose_secret(),
         "loginAttemptId": login_attempt_id.as_ref(),
         "2FACode": two_fa_code.as_ref()
     });

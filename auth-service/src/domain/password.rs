@@ -6,7 +6,6 @@ use sqlx::{postgres::PgValueRef, Decode, Postgres, Type};
 pub struct Password(Secret<String>);
 
 impl PartialEq for Password {
-    // New!
     fn eq(&self, other: &Self) -> bool {
         // We can use the expose_secret method to expose the secret in a
         // controlled manner when needed!
@@ -60,7 +59,7 @@ impl Password {
 impl<'r> Decode<'r, Postgres> for Password {
     fn decode(value: PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
         let s = <String as Decode<Postgres>>::decode(value)?;
-        Password::parse(secrecy::Secret::new(s)).map_err(|e| e.into())
+        Password::parse(Secret::new(s)).map_err(|e| e.into())
     }
 }
 

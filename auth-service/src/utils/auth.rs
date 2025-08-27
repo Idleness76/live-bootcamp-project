@@ -4,6 +4,7 @@ use axum_extra::extract::cookie::{Cookie, SameSite};
 use chrono::Utc;
 use color_eyre::eyre::{eyre, Context, ContextCompat, Result};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Validation};
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 
 // This value determines how long the JWT auth token is valid for
@@ -58,7 +59,7 @@ fn generate_auth_token(email: &Email) -> Result<String> {
         exp
     ))?;
 
-    let sub = email.as_ref().to_owned();
+    let sub = email.as_ref().expose_secret().to_owned();
 
     let claims = Claims { sub, exp };
 
@@ -112,6 +113,7 @@ fn create_token(claims: &Claims) -> Result<String> {
 mod tests {
     use super::*;
     use crate::services::RedisBannedTokenStore;
+    use secrecy::Secret;
     use std::sync::Arc;
     use tokio::{sync::RwLock, task};
 
@@ -151,7 +153,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_auth_cookie_returns_jwt() {
-        let email = Email::parse("test@example.com".to_owned()).unwrap();
+        let email = Email::parse(Secret::new("test@example.com".to_owned())).unwrap();
         let cookie = generate_auth_cookie(&email).unwrap();
         let value = cookie.value();
         assert_eq!(value.split('.').count(), 3);
@@ -159,14 +161,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_auth_token() {
-        let email = Email::parse("test@example.com".to_owned()).unwrap();
+        let email = Email::parse(Secret::new("test@example.com".to_owned())).unwrap();
         let result = generate_auth_token(&email).unwrap();
         assert_eq!(result.split('.').count(), 3);
     }
 
     #[tokio::test]
     async fn test_decode_claims_with_valid_token() {
-        let email = Email::parse("test@example.com".to_owned()).unwrap();
+        let email = Email::parse(Secret::new("test@example.com".to_owned())).unwrap();
         let token = generate_auth_token(&email).unwrap();
         let claims = decode_claims(&token).expect("should decode claims");
         assert_eq!(claims.sub, "test@example.com");
@@ -175,7 +177,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_token_with_valid_token() {
-        let email = Email::parse("test@example.com".to_owned()).unwrap();
+        let email = Email::parse(Secret::new("test@example.com".to_owned())).unwrap();
         let token = generate_auth_token(&email).unwrap();
         let banned_store = make_redis_store().await;
 
@@ -204,7 +206,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_token_with_banned_token() {
-        let email = Email::parse("test@example.com".to_owned()).unwrap();
+        let email = Email::parse(Secret::new("test@example.com".to_owned())).unwrap();
         let token = generate_auth_token(&email).unwrap();
         let mut banned_store = make_redis_store().await;
 
@@ -215,8 +217,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_banned_token_isolation() {
-        let email1 = Email::parse("one@example.com".to_owned()).unwrap();
-        let email2 = Email::parse("two@example.com".to_owned()).unwrap();
+        let email1 = Email::parse(Secret::new("one@example.com".to_owned())).unwrap();
+        let email2 = Email::parse(Secret::new("two@example.com".to_owned())).unwrap();
         let token1 = generate_auth_token(&email1).unwrap();
         let token2 = generate_auth_token(&email2).unwrap();
         let mut banned_store = make_redis_store().await;

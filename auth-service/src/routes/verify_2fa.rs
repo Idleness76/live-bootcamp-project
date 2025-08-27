@@ -4,6 +4,7 @@ use crate::utils::generate_auth_cookie;
 use axum::extract::State;
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
+use secrecy::Secret;
 use serde::Deserialize;
 
 #[tracing::instrument(name = "Verify 2FA", skip_all)]
@@ -12,7 +13,8 @@ pub async fn verify_2fa(
     jar: CookieJar,
     Json(request): Json<Verify2FARequest>,
 ) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
-    let email = Email::parse(request.email).map_err(|_| AuthAPIError::IncorrectCredentials)?;
+    let email =
+        Email::parse(Secret::new(request.email)).map_err(|_| AuthAPIError::IncorrectCredentials)?;
 
     let (stored_login_attempt_id, stored_two_fa_code) = state
         .two_fa_code_store
