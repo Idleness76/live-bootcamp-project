@@ -1,6 +1,6 @@
 use crate::domain::{Email, Password, User};
 use color_eyre::eyre::{eyre, Context, Report, Result};
-use rand::Rng;
+use secrecy::Secret;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -10,7 +10,11 @@ pub trait UserStore: Send + Sync {
     async fn get_user(&self, email: &Email) -> Result<User, UserStoreError>;
     async fn validate_user(&self, email: &Email, password: &Password)
         -> Result<(), UserStoreError>;
-    async fn authenticate_user(&self, email: &str, password: &str) -> Result<User, UserStoreError>;
+    async fn authenticate_user(
+        &self,
+        email: &str,
+        password: &Secret<String>,
+    ) -> Result<User, UserStoreError>;
 }
 
 #[derive(Debug, Error)]

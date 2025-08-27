@@ -4,6 +4,7 @@ use argon2::{
     PasswordVerifier, Version,
 };
 use color_eyre::eyre::{eyre, Context, Result};
+use secrecy::{ExposeSecret, Secret};
 use sqlx::{PgPool, Row};
 
 pub struct PostgresUserStore {
@@ -25,7 +26,8 @@ struct UserPasswordRow {
 impl UserStore for PostgresUserStore {
     #[tracing::instrument(name = "Adding user to PostgreSQL", skip_all)]
     async fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
-        let password_hash = compute_password_hash(user.password.as_ref().to_string())
+        // Clone the secret password (we own `user`) and keep it wrapped while passing to the hashing helper
+        let password_hash = compute_password_hash(user.password.as_ref().clone())
             .await
             .map_err(UserStoreError::UnexpectedError)?;
 
@@ -90,13 +92,19 @@ impl UserStore for PostgresUserStore {
             None => return Err(UserStoreError::UserNotFound),
         };
 
-        verify_password_hash(password_hash, password.as_ref().to_string())
+        // Wrap the stored hash in a Secret to avoid exposing raw strings at the callsite.
+        let stored = Secret::new(password_hash);
+        verify_password_hash(&stored, password.as_ref())
             .await
             .map_err(|_| UserStoreError::InvalidCredentials)
     }
 
     #[tracing::instrument(name = "Authenticating user from PostgreSQL", skip_all)]
-    async fn authenticate_user(&self, email: &str, password: &str) -> Result<User, UserStoreError> {
+    async fn authenticate_user(
+        &self,
+        email: &str,
+        password: &Secret<String>,
+    ) -> Result<User, UserStoreError> {
         let row = sqlx::query(
             r#"
             SELECT email, password_hash, requires_2fa
@@ -113,12 +121,14 @@ impl UserStore for PostgresUserStore {
         let user = User {
             email: Email::parse(row.get::<&str, _>("email").to_string())
                 .map_err(|_| UserStoreError::InvalidCredentials)?,
-            password: Password::parse(row.get::<&str, _>("password_hash").to_string())
+            // Keep the DB password hash wrapped as a Secret when parsing into `Password`.
+            password: Password::parse(Secret::new(row.get::<&str, _>("password_hash").to_string()))
                 .map_err(|_| UserStoreError::InvalidCredentials)?,
             requires_2fa: row.get::<bool, _>("requires_2fa"),
         };
 
-        verify_password_hash(user.password.as_ref().to_string(), password.to_string())
+        // Compare the stored password hash (wrapped) with the incoming secret password.
+        verify_password_hash(user.password.as_ref(), password)
             .await
             .map_err(|_| UserStoreError::InvalidCredentials)?;
 
@@ -128,16 +138,20 @@ impl UserStore for PostgresUserStore {
 
 #[tracing::instrument(name = "Verify password hash", skip_all)]
 async fn verify_password_hash(
-    expected_password_hash: String,
-    password_candidate: String,
+    expected_password_hash: &Secret<String>,
+    password_candidate: &Secret<String>,
 ) -> Result<()> {
     let current_span: tracing::Span = tracing::Span::current();
 
+    // Clone the inner strings here (safe within the current scope) and move into blocking code.
+    let expected_clone = expected_password_hash.expose_secret().clone();
+    let candidate_clone = password_candidate.expose_secret().clone();
+
     tokio::task::spawn_blocking(move || {
         current_span.in_scope(|| {
-            let parsed_hash = PasswordHash::new(&expected_password_hash)?;
+            let parsed_hash = PasswordHash::new(expected_clone.as_str())?;
             Argon2::default()
-                .verify_password(password_candidate.as_bytes(), &parsed_hash)
+                .verify_password(candidate_clone.as_bytes(), &parsed_hash)
                 .wrap_err("failed to verify password hash")
         })
     })
@@ -145,17 +159,18 @@ async fn verify_password_hash(
 }
 
 #[tracing::instrument(name = "Computing password hash", skip_all)]
-async fn compute_password_hash(password: String) -> Result<String> {
+async fn compute_password_hash(password: Secret<String>) -> Result<String> {
     let current_span: tracing::Span = tracing::Span::current();
 
     let password_hash = tokio::task::spawn_blocking(move || -> Result<String> {
         current_span.in_scope(|| {
+            let find_hash = password.expose_secret();
             let salt = SaltString::generate(&mut rand::thread_rng());
             let params = Params::new(15000, 2, 1, None)
                 .map_err(|e| eyre!("invalid argon2 params: {}", e))?;
             let argon = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
             let ph = argon
-                .hash_password(password.as_bytes(), &salt)
+                .hash_password(find_hash.as_bytes(), &salt)
                 .map_err(|e| eyre!("failed to hash password: {}", e))?;
             Ok(ph.to_string())
         })

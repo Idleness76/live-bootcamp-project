@@ -1,44 +1,58 @@
 use color_eyre::eyre::{eyre, Result};
+use secrecy::{ExposeSecret, Secret};
 use sqlx::{postgres::PgValueRef, Decode, Postgres, Type};
 
-#[derive(Debug, serde::Deserialize, Clone, PartialEq)]
-pub struct Password(String);
+#[derive(Debug, Clone)]
+pub struct Password(Secret<String>);
 
-impl AsRef<str> for Password {
-    fn as_ref(&self) -> &str {
+impl PartialEq for Password {
+    // New!
+    fn eq(&self, other: &Self) -> bool {
+        // We can use the expose_secret method to expose the secret in a
+        // controlled manner when needed!
+        self.0.expose_secret() == other.0.expose_secret()
+    }
+}
+
+impl AsRef<Secret<String>> for Password {
+    fn as_ref(&self) -> &Secret<String> {
         &self.0
     }
 }
 
 impl Password {
-    pub fn parse(s: String) -> Result<Password> {
-        if s.is_empty() {
+    pub fn parse(s: Secret<String>) -> Result<Password> {
+        let inner = s.expose_secret();
+        if inner.is_empty() {
             return Err(eyre!("Password cannot be empty"));
         }
 
-        if s.len() < 8 {
+        if inner.len() < 8 {
             return Err(eyre!("Password must be at least 8 characters long"));
         }
 
-        if !s.chars().any(|c| c.is_uppercase()) {
+        if !inner.chars().any(|c| c.is_uppercase()) {
             return Err(eyre!("Password must contain at least one uppercase letter"));
         }
 
-        if !s.chars().any(|c| c.is_lowercase()) {
+        if !inner.chars().any(|c| c.is_lowercase()) {
             return Err(eyre!("Password must contain at least one lowercase letter"));
         }
 
-        if !s.chars().any(|c| c.is_ascii_digit()) {
+        if !inner.chars().any(|c| c.is_ascii_digit()) {
             return Err(eyre!("Password must contain at least one digit"));
         }
 
-        if !s.chars().any(|c| "!@#$%^&*()_+-=[]{}|;:,.<>?".contains(c)) {
+        if !inner
+            .chars()
+            .any(|c| "!@#$%^&*()_+-=[]{}|;:,.<>?".contains(c))
+        {
             return Err(eyre!(
                 "Password must contain at least one special character"
             ));
         }
 
-        Ok(Password(s.to_string()))
+        Ok(Password(s))
     }
 }
 
@@ -46,7 +60,7 @@ impl Password {
 impl<'r> Decode<'r, Postgres> for Password {
     fn decode(value: PgValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
         let s = <String as Decode<Postgres>>::decode(value)?;
-        Password::parse(s).map_err(|e| e.into())
+        Password::parse(secrecy::Secret::new(s)).map_err(|e| e.into())
     }
 }
 
@@ -133,13 +147,13 @@ mod tests {
 
     #[quickcheck]
     fn prop_valid_passwords_always_parse_successfully(valid_pw: ValidPassword) -> bool {
-        Password::parse(valid_pw.0).is_ok()
+        Password::parse(Secret::new(valid_pw.0)).is_ok()
     }
 
     #[quickcheck]
     fn prop_parsed_password_equals_input(valid_pw: ValidPassword) -> bool {
-        match Password::parse(valid_pw.0.clone()) {
-            Ok(password) => password.as_ref() == valid_pw.0,
+        match Password::parse(Secret::new(valid_pw.0.clone())) {
+            Ok(password) => password.as_ref().expose_secret() == &valid_pw.0,
             Err(_) => false,
         }
     }
@@ -147,7 +161,7 @@ mod tests {
     #[quickcheck]
     fn prop_short_passwords_always_fail(short_input: String) -> bool {
         if short_input.len() < 8 {
-            Password::parse(short_input).is_err()
+            Password::parse(Secret::new(short_input)).is_err()
         } else {
             true
         }
@@ -159,17 +173,17 @@ mod tests {
 
         for _ in 0..50 {
             let fake_password: String = FakePassword(1..8).fake();
-            assert!(Password::parse(fake_password).is_err());
+            assert!(Password::parse(Secret::new(fake_password)).is_err());
         }
     }
 
     #[test]
     fn test_empty_password_fails() {
-        assert!(Password::parse(String::new()).is_err());
+        assert!(Password::parse(Secret::new(String::new())).is_err());
     }
 
     #[test]
     fn test_known_valid_password() {
-        assert!(Password::parse("Password123!".to_string()).is_ok());
+        assert!(Password::parse(Secret::new("Password123!".to_string())).is_ok());
     }
 }
