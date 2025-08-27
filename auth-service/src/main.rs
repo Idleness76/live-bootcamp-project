@@ -44,7 +44,7 @@ async fn main() {
 
 async fn configure_postgresql() -> PgPool {
     // Create a new database connection pool
-    let pg_pool = get_postgres_pool(&DATABASE_URL)
+    let pg_pool = get_postgres_pool(DATABASE_URL.clone())
         .await
         .expect("Failed to create Postgres connection pool!");
 

@@ -1,3 +1,7 @@
+use crate::utils::{
+    env::ALLOWED_ORIGINS_ENV_VAR, make_span_with_request_id, on_request, on_response,
+    DEFAULT_ALLOWED_ORIGINS,
+};
 use app_state::AppState;
 use axum::{
     http::{HeaderValue, Method},
@@ -7,12 +11,8 @@ use axum::{
     Router,
 };
 use redis::{Client, RedisResult};
+use secrecy::{ExposeSecret, Secret};
 use sqlx::{postgres::PgPoolOptions, PgPool};
-
-use crate::utils::{
-    env::ALLOWED_ORIGINS_ENV_VAR, make_span_with_request_id, on_request, on_response,
-    DEFAULT_ALLOWED_ORIGINS,
-};
 use std::{env, error::Error};
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -104,9 +104,12 @@ fn load_allowed_origins() -> Result<Option<Vec<HeaderValue>>, Box<dyn Error>> {
     Ok(Some(parsed))
 }
 
-pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
+pub async fn get_postgres_pool(url: Secret<String>) -> Result<PgPool, sqlx::Error> {
     // Create a new PostgreSQL connection pool
-    PgPoolOptions::new().max_connections(5).connect(url).await
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(url.expose_secret())
+        .await
 }
 
 pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {

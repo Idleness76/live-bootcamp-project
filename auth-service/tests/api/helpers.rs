@@ -1,11 +1,3 @@
-use reqwest::cookie::Jar;
-use sqlx::{
-    postgres::{PgConnectOptions, PgPoolOptions},
-    Connection, Executor, PgConnection, PgPool,
-};
-use std::{str::FromStr, sync::Arc};
-use tokio::sync::RwLock;
-
 use auth_service::{
     app_state::AppState,
     get_postgres_pool, get_redis_client,
@@ -13,6 +5,14 @@ use auth_service::{
     utils::{test, DATABASE_URL, REDIS_HOST_NAME},
     Application,
 };
+use reqwest::cookie::Jar;
+use secrecy::{ExposeSecret, Secret};
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    Connection, Executor, PgConnection, PgPool,
+};
+use std::{str::FromStr, sync::Arc};
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Test application wrapper that provides HTTP client functionality for integration tests.
@@ -184,12 +184,13 @@ async fn configure_postgresql() -> PgPool {
     // We are creating a new database for each test case, and we need to ensure each database has a unique name!
     let db_name = Uuid::new_v4().to_string();
 
-    configure_database(&postgresql_conn_url, &db_name).await;
+    configure_database(&postgresql_conn_url.expose_secret(), &db_name).await;
 
-    let postgresql_conn_url_with_db = format!("{}/{}", postgresql_conn_url, db_name);
+    let postgresql_conn_url_with_db =
+        format!("{}/{}", postgresql_conn_url.expose_secret(), db_name);
 
     // Create a new connection pool and return it
-    get_postgres_pool(&postgresql_conn_url_with_db)
+    get_postgres_pool(Secret::new(postgresql_conn_url_with_db))
         .await
         .expect("Failed to create Postgres connection pool!")
 }
@@ -223,8 +224,8 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
 }
 
 async fn delete_database(db_name: &str) -> Result<(), sqlx::Error> {
-    let postgresql_conn_url = DATABASE_URL.to_owned();
-    let connection_options = PgConnectOptions::from_str(&postgresql_conn_url)?;
+    let postgresql_conn_url = DATABASE_URL.expose_secret();
+    let connection_options = PgConnectOptions::from_str(postgresql_conn_url)?;
     let mut connection = PgConnection::connect_with(&connection_options).await?;
 
     // Terminate active connections

@@ -1,5 +1,6 @@
 use dotenvy::dotenv;
 use lazy_static::lazy_static;
+use secrecy::Secret;
 use std::env as std_env;
 
 pub mod prod {
@@ -14,7 +15,7 @@ pub mod test {
 lazy_static! {
     pub static ref JWT_SECRET: String = set_token();
     pub static ref POSTGRES_PASSWORD: String = set_postgres_password();
-    pub static ref DATABASE_URL: String = set_database_url();
+    pub static ref DATABASE_URL: Secret<String> = set_database_url();
     pub static ref REDIS_HOST_NAME: String = set_redis_host();
 }
 
@@ -37,13 +38,13 @@ fn set_postgres_password() -> String {
     secret
 }
 
-fn set_database_url() -> String {
+fn set_database_url() -> Secret<String> {
     dotenv().ok();
     let secret = std_env::var(env::DATABASE_URL_ENV_VAR).expect("DATABASE_URL must be set.");
     if secret.is_empty() {
         panic!("DATABASE_URL must be set.");
     }
-    secret
+    Secret::new(secret)
 }
 
 fn set_redis_host() -> String {
